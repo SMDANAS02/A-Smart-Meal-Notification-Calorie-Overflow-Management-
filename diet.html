@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FitAI — Diet Plan</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="diet.css"/>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="nav-left">
+    <div class="nav-brand">FIT<em>AI</em></div>
+    <div class="nav-links">
+      <a href="tracker.html" class="nav-link">TRACKER</a>
+      <a href="diet.html" class="nav-link active">DIET PLAN</a>
+    </div>
+  </div>
+  <div class="nav-right">
+    <div class="nav-cal-badge">
+      <span id="navTotalCal">0</span> / <span id="navTargetCal">2000</span>
+      <span class="nav-cal-unit">KCAL</span>
+    </div>
+    <div class="nav-avatar" id="navAvatar">U</div>
+  </div>
+</nav>
+
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<div class="page-layout">
+
+  <aside class="left-panel">
+
+    <div class="filter-card">
+      <div class="filter-title">DIET TYPE</div>
+      <div class="diet-type-group">
+        <button class="diet-type-btn active" id="dt-all"    onclick="setDietType('all',    this)"><span class="dt-icon">🍽️</span>ALL</button>
+        <button class="diet-type-btn"        id="dt-veg"    onclick="setDietType('veg',    this)"><span class="dt-icon veg-dot"></span>VEG</button>
+        <button class="diet-type-btn"        id="dt-nonveg" onclick="setDietType('nonveg', this)"><span class="dt-icon nonveg-dot"></span>NON-VEG</button>
+        <button class="diet-type-btn"        id="dt-vegan"  onclick="setDietType('vegan',  this)"><span class="dt-icon vegan-dot"></span>VEGAN</button>
+      </div>
+    </div>
+
+    <div class="filter-card">
+      <div class="filter-title">MEAL SIZE</div>
+      <div class="meal-size-group">
+        <button class="size-btn"        id="sz-light"    onclick="setMealSize('light',    this)">LIGHT</button>
+        <button class="size-btn active" id="sz-balanced" onclick="setMealSize('balanced', this)">BALANCED</button>
+        <button class="size-btn"        id="sz-heavy"    onclick="setMealSize('heavy',    this)">HEAVY</button>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-title">DAILY SUMMARY</div>
+      <div class="summary-ring-wrap">
+        <svg viewBox="0 0 120 120" class="summary-ring-svg">
+          <circle class="sr-bg"   cx="60" cy="60" r="50"/>
+          <circle class="sr-fill" cx="60" cy="60" r="50" id="summaryRing"/>
+        </svg>
+        <div class="summary-ring-center">
+          <div class="sr-val" id="srConsumed">0</div>
+          <div class="sr-unit">KCAL</div>
+        </div>
+      </div>
+      <div class="summary-stats">
+        <div class="ss-item">
+          <div class="ss-val" id="ssTotalCal">0</div>
+          <div class="ss-lbl">TOTAL</div>
+        </div>
+        <div class="ss-div"></div>
+        <div class="ss-item">
+          <div class="ss-val" id="ssRemaining">0</div>
+          <div class="ss-lbl">LEFT</div>
+        </div>
+      </div>
+      <div class="summary-macros">
+        <div class="sm-row"><span class="sm-dot protein-dot"></span><span class="sm-name">PROTEIN</span><span class="sm-val" id="smProtein">0g</span></div>
+        <div class="sm-row"><span class="sm-dot carbs-dot"></span><span class="sm-name">CARBS</span><span class="sm-val" id="smCarbs">0g</span></div>
+        <div class="sm-row"><span class="sm-dot fat-dot"></span><span class="sm-name">FAT</span><span class="sm-val" id="smFat">0g</span></div>
+      </div>
+    </div>
+
+    <div class="shop-card">
+      <div class="shop-header">
+        <div class="shop-title">🛒 SHOPPING LIST</div>
+        <button class="shop-copy-btn" onclick="copyShoppingList()">COPY</button>
+      </div>
+      <div class="shop-list" id="shopList">
+        <div class="shop-empty">Add meals to generate list</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <main class="right-panel">
+
+    <div class="rp-header">
+      <div class="rp-header-left">
+        <div class="rp-eyebrow">PERSONALISED NUTRITION</div>
+        <h1 class="rp-title">YOUR DIET <span>PLAN</span></h1>
+      </div>
+      <div class="rp-header-right">
+        <button class="generate-btn" onclick="generateFullPlan()">★ GENERATE FULL PLAN</button>
+        <button class="reset-btn"    onclick="resetPlan()">RESET</button>
+      </div>
+    </div>
+
+    <div class="meals-container" id="mealsContainer"></div>
+
+  </main>
+</div>
+
+<!-- RECIPE MODAL -->
+<div class="modal-overlay" id="recipeOverlay" onclick="closeRecipe()"></div>
+<div class="recipe-modal" id="recipeModal">
+  <div class="rm-header">
+    <div>
+      <div class="rm-tag"   id="rmTag">BREAKFAST</div>
+      <div class="rm-title" id="rmTitle">—</div>
+      <div class="rm-meta"  id="rmMeta">—</div>
+    </div>
+    <button class="rm-close" onclick="closeRecipe()">✕</button>
+  </div>
+  <div class="rm-body">
+    <div class="rm-section">
+      <div class="rm-section-title">INGREDIENTS</div>
+      <ul class="rm-ingredients" id="rmIngredients"></ul>
+    </div>
+    <div class="rm-section">
+      <div class="rm-section-title">RECIPE STEPS</div>
+      <ol class="rm-steps" id="rmSteps"></ol>
+    </div>
+    <div class="rm-macros" id="rmMacros"></div>
+  </div>
+  <div class="rm-footer">
+    <button class="rm-add-btn"  id="rmAddBtn">+ ADD TO MY PLAN</button>
+    <button class="rm-swap-btn" onclick="swapMeal()">↻ SWAP MEAL</button>
+  </div>
+</div>
+
+<script src="diet.js"></script>
+</body>
+</html>

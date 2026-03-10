@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FitAI — Calorie Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="tracker.css"/>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="nav-left">
+    <div class="nav-brand">FIT<em>AI</em></div>
+    <div class="nav-links">
+      <a href="tracker.html" class="nav-link active">TRACKER</a>
+      <a href="diet.html"    class="nav-link">DIET PLAN</a>
+    </div>
+  </div>
+  <div class="nav-center"><span class="nav-date" id="navDate"></span></div>
+  <div class="nav-right">
+    <span class="nav-user" id="navUser">—</span>
+    <div class="nav-avatar" id="navAvatar">U</div>
+  </div>
+</nav>
+
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="ring-card">
+      <div class="ring-label">DAILY CALORIES</div>
+      <div class="ring-wrap">
+        <svg class="ring-svg" viewBox="0 0 160 160">
+          <circle class="ring-bg" cx="80" cy="80" r="66"
+            fill="none" stroke="#1a1a1a" stroke-width="8"/>
+          <circle class="ring-fill" cx="80" cy="80" r="66" id="ringFill"
+            fill="none"
+            stroke="var(--red, #E8000D)"
+            stroke-width="8"
+            stroke-linecap="round"
+            stroke-dasharray="415"
+            stroke-dashoffset="415"
+            transform="rotate(-90 80 80)"
+            style="transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;"/>
+        </svg>
+        <div class="ring-center">
+          <div class="ring-consumed" id="ringConsumed">0</div>
+          <div class="ring-unit">CONSUMED</div>
+          <div class="ring-slash">—</div>
+          <div class="ring-total" id="ringTotal">2000</div>
+          <div class="ring-unit">TARGET</div>
+        </div>
+      </div>
+      <div class="ring-stats">
+        <div class="ring-stat">
+          <div class="ring-stat-val" id="statRemaining">2000</div>
+          <div class="ring-stat-lbl">REMAINING</div>
+        </div>
+        <div class="ring-stat-divider"></div>
+        <div class="ring-stat">
+          <div class="ring-stat-val" id="statBurned">0</div>
+          <div class="ring-stat-lbl">BURNED</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="macro-card">
+      <div class="macro-title">MACROS</div>
+      <div class="macro-row">
+        <div class="macro-info">
+          <span class="macro-name">PROTEIN</span>
+          <span class="macro-vals"><span id="mp-eaten">0</span>g / <span id="mp-total">0</span>g</span>
+        </div>
+        <div class="macro-bar-wrap"><div class="macro-bar protein-bar" id="mpBar"></div></div>
+      </div>
+      <div class="macro-row">
+        <div class="macro-info">
+          <span class="macro-name">CARBS</span>
+          <span class="macro-vals"><span id="mc-eaten">0</span>g / <span id="mc-total">0</span>g</span>
+        </div>
+        <div class="macro-bar-wrap"><div class="macro-bar carbs-bar" id="mcBar"></div></div>
+      </div>
+      <div class="macro-row">
+        <div class="macro-info">
+          <span class="macro-name">FAT</span>
+          <span class="macro-vals"><span id="mf-eaten">0</span>g / <span id="mf-total">0</span>g</span>
+        </div>
+        <div class="macro-bar-wrap"><div class="macro-bar fat-bar" id="mfBar"></div></div>
+      </div>
+    </div>
+
+    <div class="water-card">
+      <div class="water-header">
+        <div class="water-title">WATER INTAKE</div>
+        <div class="water-count"><span id="waterCount">0</span> / <span id="waterGoal">8</span> glasses</div>
+      </div>
+      <div class="water-glasses" id="waterGlasses"></div>
+      <button class="water-btn" onclick="addWater()">+ ADD GLASS</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="textract-bar">
+      <button class="textract-btn" onclick="openTextract()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M3 9h18M9 21V9"/>
+        </svg>
+        SCAN FOOD LABEL
+      </button>
+      <span class="textract-bar-note">Upload a food label image — AI will extract calories & macros instantly</span>
+    </div>
+
+    <div class="meal-selector-card">
+      <div class="msc-left">
+        <div class="msc-label">MEAL PLAN</div>
+        <div class="msc-title" id="mscTitle">3 MEALS / DAY</div>
+      </div>
+      <div class="msc-right">
+        <div class="meal-count-group">
+          <button class="mcg-btn" onclick="changeMealCount(-1)">−</button>
+          <span class="mcg-val" id="mcgVal">3</span>
+          <button class="mcg-btn" onclick="changeMealCount(1)">+</button>
+        </div>
+        <span class="msc-note">meals per day</span>
+      </div>
+    </div>
+
+    <div class="meals-grid" id="mealsGrid"></div>
+
+    <div class="recommend-card">
+      <div class="rec-header">
+        <div class="rec-title-wrap">★ AI MEAL RECOMMENDATIONS</div>
+        <div class="rec-budget">Budget: <span id="recBudgetVal">0</span> kcal remaining</div>
+      </div>
+      <div class="rec-meals" id="recMeals"></div>
+    </div>
+  </main>
+</div>
+
+<!-- LOG FOOD MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()"></div>
+<div class="modal" id="modal">
+  <div class="modal-header">
+    <div>
+      <div class="modal-title">LOG FOOD</div>
+      <div class="modal-meal-name" id="modalMealName">—</div>
+    </div>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="ai-input-wrap">
+      <input class="modal-input" type="text" id="foodName"
+        placeholder="e.g. chicken, idli, banana..."
+        oninput="showFoodSuggestions(this.value)"
+        onkeydown="handleSuggestionKey(event)"
+        autocomplete="off"/>
+      <div class="ai-badge">AI</div>
+    </div>
+    <div class="food-suggestions" id="foodSuggestions"></div>
+    <div class="ai-hint">Type to search — select a food to auto-fill</div>
+
+    <div class="modal-field">
+      <label class="modal-label">QUANTITY / SERVING</label>
+      <div class="qty-wrap">
+        <input class="modal-input" type="text" id="foodQty" placeholder="e.g. 1 cup, 100g, 2 pieces, 1 bowl"/>
+      </div>
+      <div class="ai-hint">Be specific — "100g", "1 cup", "2 pieces" gives better results</div>
+    </div>
+
+    <div class="ai-result-preview" id="aiResultPreview" style="display:none">
+      <div class="ai-result-title">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        AI CALCULATED
+      </div>
+      <div class="ai-result-grid">
+        <div class="ai-result-item"><div class="ai-result-val" id="aiCal">—</div><div class="ai-result-lbl">KCAL</div></div>
+        <div class="ai-result-item"><div class="ai-result-val" id="aiProtein">—</div><div class="ai-result-lbl">PROTEIN</div></div>
+        <div class="ai-result-item"><div class="ai-result-val" id="aiCarbs">—</div><div class="ai-result-lbl">CARBS</div></div>
+        <div class="ai-result-item"><div class="ai-result-val" id="aiFat">—</div><div class="ai-result-lbl">FAT</div></div>
+      </div>
+      <div class="ai-result-note" id="aiNote"></div>
+    </div>
+
+    <div class="ai-calculating" id="aiCalculating" style="display:none">
+      <div class="ai-calc-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+      <span class="ai-calc-text">AI is calculating nutrition...</span>
+    </div>
+
+    <div class="ai-error" id="aiError" style="display:none"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="modal-cancel" onclick="closeModal()">CANCEL</button>
+    <button class="modal-calculate" id="modalCalcBtn" onclick="calculateWithAI()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+      </svg>
+      CALCULATE WITH AI
+    </button>
+    <button class="modal-add" id="modalAddBtn" onclick="logFood()" style="display:none">+ ADD TO TRACKER</button>
+  </div>
+</div>
+
+<!-- TEXTRACT MODAL -->
+<div class="tx-overlay" id="txOverlay" onclick="closeTextract()"></div>
+<div class="tx-modal" id="txModal">
+  <div class="tx-header">
+    <div class="tx-header-left">
+      <div class="tx-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M3 9h18M9 21V9"/>
+        </svg>
+      </div>
+      <div>
+        <div class="tx-title">TEXTRACT</div>
+        <div class="tx-subtitle">AI Food Label Scanner</div>
+      </div>
+    </div>
+    <button class="tx-close" onclick="closeTextract()">✕</button>
+  </div>
+  <div class="tx-tabs">
+    <button class="tx-tab active" id="tab-scan" onclick="switchTab('scan')">📷 SCAN</button>
+    <button class="tx-tab" id="tab-history" onclick="switchTab('history')">🕐 HISTORY</button>
+  </div>
+  <div class="tx-body" id="tabScan">
+    <div class="tx-upload-zone" id="txUploadZone"
+      ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"
+      onclick="document.getElementById('txFileInput').click()">
+      <input type="file" id="txFileInput" accept="image/*" style="display:none" onchange="handleFileSelect(event)"/>
+      <div class="tx-upload-icon" id="txUploadIcon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+      <div class="tx-upload-text" id="txUploadText">
+        <div class="tx-upload-main">DROP FOOD LABEL IMAGE HERE</div>
+        <div class="tx-upload-sub">or click to browse · JPG, PNG, WEBP supported</div>
+      </div>
+      <img class="tx-preview-img" id="txPreviewImg" style="display:none"/>
+    </div>
+    <div class="tx-or-row">
+      <div class="tx-or-line"></div><span class="tx-or-text">OR</span><div class="tx-or-line"></div>
+    </div>
+    <button class="tx-camera-btn" onclick="openCamera()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+      USE CAMERA
+      <input type="file" id="txCameraInput" accept="image/*" capture="environment" style="display:none" onchange="handleFileSelect(event)"/>
+    </button>
+    <button class="tx-scan-btn" id="txScanBtn" onclick="scanImage()" disabled>
+      <span id="txScanText">SELECT IMAGE TO SCAN</span>
+      <div class="tx-scan-dots" id="txScanDots" style="display:none">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+    </button>
+    <div class="tx-results" id="txResults" style="display:none">
+      <div class="tx-results-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        EXTRACTED NUTRITION DATA
+      </div>
+      <div class="tx-food-name-row">
+        <label class="tx-lbl">FOOD NAME</label>
+        <input class="tx-input" type="text" id="txFoodName" placeholder="Food item name"/>
+      </div>
+      <div class="tx-macros-grid">
+        <div class="tx-macro-field"><label class="tx-lbl">CALORIES</label><input class="tx-input" type="number" id="txCalories" placeholder="0"/><span class="tx-unit">KCAL</span></div>
+        <div class="tx-macro-field"><label class="tx-lbl">PROTEIN</label><input class="tx-input" type="number" id="txProtein" placeholder="0"/><span class="tx-unit">G</span></div>
+        <div class="tx-macro-field"><label class="tx-lbl">CARBS</label><input class="tx-input" type="number" id="txCarbs" placeholder="0"/><span class="tx-unit">G</span></div>
+        <div class="tx-macro-field"><label class="tx-lbl">FAT</label><input class="tx-input" type="number" id="txFat" placeholder="0"/><span class="tx-unit">G</span></div>
+      </div>
+      <div class="tx-meal-select-row">
+        <label class="tx-lbl">ADD TO MEAL</label>
+        <select class="tx-select" id="txMealSelect"></select>
+      </div>
+      <div class="tx-result-actions">
+        <button class="tx-rescan-btn" onclick="resetScan()">↺ RESCAN</button>
+        <button class="tx-add-btn" onclick="addToTracker()">+ ADD TO TRACKER</button>
+      </div>
+    </div>
+  </div>
+  <div class="tx-body" id="tabHistory" style="display:none">
+    <div class="tx-history-list" id="txHistoryList"></div>
+  </div>
+</div>
+
+<script src="tracker.js"></script>
+</body>
+</html>

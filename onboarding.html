@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FitAI — Your Profile</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="onboarding.css"/>
+</head>
+<body>
+
+  <div id="transitionOverlay" class="expanded"></div>
+
+  <div id="onboardingPage">
+    <div class="ob-grid"></div>
+    <div class="ob-glow"></div>
+
+    <div class="ob-topbar">
+      <div class="brand-name">FIT<em>AI</em></div>
+      <div class="ob-step-label">STEP 01 — BUILD YOUR PROFILE</div>
+    </div>
+
+    <div class="ob-container">
+
+      <!-- LEFT -->
+      <div class="ob-left">
+        <div class="corner-tl"></div>
+        <div class="corner-br"></div>
+        <div class="ob-eyebrow">LET'S GET STARTED</div>
+        <h1 class="ob-title">TELL US<br/>ABOUT<br/><span>YOURSELF</span></h1>
+        <p class="ob-desc">We'll calculate your daily calorie target and build a personalised plan around your goal.</p>
+
+        <div class="result-card" id="resultCard">
+          <div class="result-label">YOUR DAILY CALORIE TARGET</div>
+          <div class="result-value" id="resultCalories">—</div>
+          <div class="result-unit">KCAL / DAY</div>
+          <div class="result-breakdown" id="resultBreakdown"></div>
+          <button class="result-btn" onclick="goToDashboard()">
+            START MY JOURNEY
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+              <polyline points="12,5 19,12 12,19"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="ob-right">
+
+        <!-- Name -->
+        <div class="ob-field">
+          <label class="ob-label">FULL NAME</label>
+          <div class="ob-input-wrap">
+            <span class="ob-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </span>
+            <input type="text" id="inp-name" placeholder="John Doe"/>
+          </div>
+        </div>
+
+        <!-- Age + Gender -->
+        <div class="ob-row">
+          <div class="ob-field">
+            <label class="ob-label">AGE</label>
+            <div class="ob-input-wrap">
+              <span class="ob-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8"  y1="2" x2="8"  y2="6"/>
+                  <line x1="3"  y1="10" x2="21" y2="10"/>
+                </svg>
+              </span>
+              <input type="number" id="inp-age" placeholder="25" min="10" max="100"/>
+              <span class="ob-unit">YRS</span>
+            </div>
+          </div>
+          <div class="ob-field">
+            <label class="ob-label">GENDER</label>
+            <div class="gender-group">
+              <button class="gender-btn active" id="g-male"   onclick="setGender('male')">♂ MALE</button>
+              <button class="gender-btn"        id="g-female" onclick="setGender('female')">♀ FEMALE</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Height + Weight -->
+        <div class="ob-row">
+          <div class="ob-field">
+            <label class="ob-label">HEIGHT</label>
+            <div class="ob-input-wrap">
+              <span class="ob-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="2"  x2="12" y2="22"/>
+                  <polyline points="7,7 12,2 17,7"/>
+                  <polyline points="7,17 12,22 17,17"/>
+                </svg>
+              </span>
+              <input type="number" id="inp-height" placeholder="175" min="100" max="250"/>
+              <span class="ob-unit">CM</span>
+            </div>
+          </div>
+          <div class="ob-field">
+            <label class="ob-label">WEIGHT</label>
+            <div class="ob-input-wrap">
+              <span class="ob-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8"  x2="12" y2="12"/>
+                  <line x1="12" y1="12" x2="14" y2="14"/>
+                </svg>
+              </span>
+              <input type="number" id="inp-weight" placeholder="70" min="30" max="300"/>
+              <span class="ob-unit">KG</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity Level -->
+        <div class="ob-field">
+          <label class="ob-label">ACTIVITY LEVEL</label>
+          <div class="activity-group">
+
+            <button class="activity-btn" id="act-sedentary" onclick="setActivity('sedentary', this)">
+              <span class="act-icon-wrap">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/>
+                  <path d="M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z"/>
+                  <path d="M5 18v2M19 18v2"/>
+                </svg>
+              </span>
+              <span class="act-name">SEDENTARY</span>
+              <span class="act-desc">Little / no exercise</span>
+            </button>
+
+            <button class="activity-btn active" id="act-light" onclick="setActivity('light', this)">
+              <span class="act-icon-wrap">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="5" r="1"/>
+                  <path d="M9 20V12l-2-4h10l-2 4v8"/>
+                  <path d="M9 12h6"/>
+                </svg>
+              </span>
+              <span class="act-name">LIGHT</span>
+              <span class="act-desc">1–3 days / week</span>
+            </button>
+
+            <button class="activity-btn" id="act-moderate" onclick="setActivity('moderate', this)">
+              <span class="act-icon-wrap">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="4" r="1"/>
+                  <path d="M12 5v5"/>
+                  <path d="m8 10 4 2 4-2"/>
+                  <path d="m7 20 5-8 5 8"/>
+                </svg>
+              </span>
+              <span class="act-name">MODERATE</span>
+              <span class="act-desc">3–5 days / week</span>
+            </button>
+
+            <button class="activity-btn" id="act-active" onclick="setActivity('active', this)">
+              <span class="act-icon-wrap">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M13 4a1 1 0 1 0 2 0 1 1 0 0 0-2 0"/>
+                  <path d="m7 21 3-6-2-4h8l-2 4 3 6"/>
+                  <path d="m5 12 2-4"/>
+                  <path d="m19 12-2-4"/>
+                  <path d="M5 12h14"/>
+                </svg>
+              </span>
+              <span class="act-name">VERY ACTIVE</span>
+              <span class="act-desc">6–7 days / week</span>
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Goal -->
+        <div class="ob-field">
+          <label class="ob-label">YOUR GOAL</label>
+          <div class="goal-group">
+
+            <button class="goal-btn" id="goal-lose" onclick="setGoal('lose', this)">
+              <div class="goal-icon-wrap">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2a10 10 0 1 1 0 20A10 10 0 0 1 12 2z"/>
+                  <path d="M12 8v4"/>
+                  <path d="M12 16h.01"/>
+                  <path d="M16 6 8 14"/>
+                  <path d="m8 6 2 2"/>
+                  <path d="m14 12 2 2"/>
+                </svg>
+              </div>
+              <div class="goal-name">LOSE WEIGHT</div>
+              <div class="goal-sub">Calorie deficit</div>
+            </button>
+
+            <button class="goal-btn active" id="goal-maintain" onclick="setGoal('maintain', this)">
+              <div class="goal-icon-wrap">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12h18"/>
+                  <path d="M3 6h18"/>
+                  <path d="M3 18h18"/>
+                </svg>
+              </div>
+              <div class="goal-name">MAINTAIN</div>
+              <div class="goal-sub">Stay balanced</div>
+            </button>
+
+            <button class="goal-btn" id="goal-gain" onclick="setGoal('gain', this)">
+              <div class="goal-icon-wrap">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 4v6a6 6 0 0 0 12 0V4"/>
+                  <line x1="4" y1="20" x2="20" y2="20"/>
+                </svg>
+              </div>
+              <div class="goal-name">GAIN MUSCLE</div>
+              <div class="goal-sub">Calorie surplus</div>
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div class="ob-error" id="ob-error"></div>
+
+        <!-- Submit -->
+        <button class="ob-submit" id="ob-submit" onclick="calculateCalories()">
+          <span id="ob-btn-text">CALCULATE MY CALORIES</span>
+          <svg id="ob-btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12,5 19,12 12,19"/>
+          </svg>
+          <div class="dots" id="ob-btn-dots" style="display:none">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+          </div>
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboardPage">
+    <div class="dash-grid"></div>
+    <div class="dash-welcome" id="dashWelcome">WELCOME</div>
+    <div class="dash-title"   id="dashTitle">YOUR FITNESS<br/><span>DASHBOARD</span></div>
+    <div class="dash-cards"   id="dashCards">
+      <div class="dash-card">
+        <div class="dash-card-value" id="dc-calories">—</div>
+        <div class="dash-card-label">Daily Calories</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-value">Day 1</div>
+        <div class="dash-card-label">Streak</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-value" id="dc-goal">—</div>
+        <div class="dash-card-label">Goal</div>
+      </div>
+    </div>
+    <button class="dash-back" id="dashBack" onclick="goBack()">← Start Over</button>
+  </div>
+
+  <div id="nextOverlay"></div>
+  <script src="onboarding.js"></script>
+</body>
+</html>
