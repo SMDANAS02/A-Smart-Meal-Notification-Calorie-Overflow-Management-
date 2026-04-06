@@ -7,7 +7,7 @@ const auth    = require('../middleware/auth');
 // GET /api/profile
 router.get('/', auth, (req, res) => {
   const profile = db.prepare('SELECT * FROM profiles WHERE user_id = ?').get(req.user.id);
-  const user    = db.prepare('SELECT id, name, email, created_at FROM users WHERE id = ?').get(req.user.id);
+  const user    = db.prepare('SELECT id, name, email, phone, created_at FROM users WHERE id = ?').get(req.user.id);
   res.json({ user, profile });
 });
 
@@ -16,7 +16,7 @@ router.put('/', auth, (req, res) => {
   const {
     age, gender, height_cm, weight_kg, goal, activity_level,
     cal_target, protein_target, carbs_target, fat_target,
-    water_target, meal_count
+    water_target, meal_count, phone
   } = req.body;
 
   db.prepare(`
@@ -41,6 +41,11 @@ router.put('/', auth, (req, res) => {
     water_target, meal_count,
     req.user.id
   );
+
+  // Update phone in users table
+  if (phone) {
+    db.prepare('UPDATE users SET phone = ? WHERE id = ?').run(phone, req.user.id);
+  }
 
   const updated = db.prepare('SELECT * FROM profiles WHERE user_id = ?').get(req.user.id);
   res.json({ message: 'Profile updated!', profile: updated });

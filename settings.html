@@ -396,6 +396,15 @@
           </div>
         </div>
       </div>
+      <div class="field-group">
+        <div class="field">
+          <label class="field-label">WhatsApp Number</label>
+          <div class="input-wrap">
+            <span class="input-unit" style="padding:0 12px;color:#555;font-size:13px;">+91</span>
+            <input class="field-input" type="tel" id="fieldWhatsapp" placeholder="9876543210" maxlength="10"/>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Goal & Activity -->
@@ -673,6 +682,12 @@ async function loadProfile() {
     document.getElementById('fieldFat').value      = p?.fat_target || '65';
     document.getElementById('fieldWater').value    = p?.water_target || '8';
 
+    // Phone number load
+    const phone = u?.phone || '';
+    if (phone) {
+      document.getElementById('fieldWhatsapp').value = phone.replace('+91', '');
+    }
+
     // Current weight in hero
     if (p?.weight_kg) document.getElementById('phsWeight').textContent = p.weight_kg + 'kg';
 
@@ -762,8 +777,10 @@ function updateMacroBars() {
 async function saveAll() {
   setSaveLoading(true);
   try {
+    const whatsapp = document.getElementById('fieldWhatsapp').value.trim();
     const body = {
       age:            parseInt(document.getElementById('fieldAge').value) || null,
+      phone: whatsapp ? `+91${whatsapp}` : null,
       gender:         document.getElementById('fieldGender').value || null,
       height_cm:      parseFloat(document.getElementById('fieldHeight').value) || null,
       weight_kg:      parseFloat(document.getElementById('fieldWeight').value) || null,

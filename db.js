@@ -20,6 +20,7 @@ db.exec(`
     name        TEXT    NOT NULL,
     email       TEXT    NOT NULL UNIQUE,
     password    TEXT    NOT NULL,
+    phone       TEXT,
     created_at  TEXT    DEFAULT (datetime('now'))
   );
 
