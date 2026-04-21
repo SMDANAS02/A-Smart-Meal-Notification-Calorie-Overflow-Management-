@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FitAI — Progress History</title>
+  <link rel="stylesheet" href="tracker.css">
+  <link rel="stylesheet" href="progress.css">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="topnav">
+    <div class="nav-left">
+      <span class="nav-logo">🔥 FITAI</span>
+    </div>
+    <div class="nav-center">
+      <a href="tracker.html" class="nav-link">TRACKER</a>
+      <a href="diet.html" class="nav-link">DIET PLAN</a>
+      <a href="progress.html" class="nav-link active">PROGRESS</a>
+    </div>
+    <div class="nav-right">
+      <span id="navUser" class="nav-user">USER</span>
+      <span id="navAvatar" class="nav-avatar">U</span>
+    </div>
+  </nav>
+
+  <!-- Background Effects -->
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+
+  <!-- Main Content -->
+  <main class="progress-container">
+    <!-- Header -->
+    <div class="progress-header">
+      <h1 class="progress-title">CALORIE HISTORY</h1>
+      <div class="time-toggle">
+        <button class="toggle-btn active" data-period="7">7 DAYS</button>
+        <button class="toggle-btn" data-period="30">30 DAYS</button>
+      </div>
+    </div>
+
+    <!-- Chart Container -->
+    <div class="chart-wrapper">
+      <div class="chart-container">
+        <svg id="historyChart" class="history-chart" viewBox="0 0 1000 400"></svg>
+        <div id="tooltip" class="tooltip" style="display: none;"></div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="loading-state" style="display: none;">
+      <div class="spinner"></div>
+      <p>Loading history...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" class="error-state" style="display: none;">
+      <p id="errorMessage"></p>
+      <button id="retryBtn" class="retry-btn">RETRY</button>
+    </div>
+
+    <!-- Export Section (Optional) -->
+    <div class="export-section" style="display: none;">
+      <button id="exportCsvBtn" class="export-btn">📥 EXPORT CSV</button>
+      <button id="exportPdfBtn" class="export-btn">📄 EXPORT PDF</button>
+    </div>
+  </main>
+
+  <script src="progress.js"></script>
+</body>
+</html>

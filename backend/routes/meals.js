@@ -3,6 +3,18 @@ const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
 const auth    = require('../middleware/auth');
+const twilio  = require('twilio');
+
+const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const FROM   = process.env.TWILIO_WHATSAPP_FROM;
+
+async function sendWhatsApp(to, message) {
+  try {
+    await client.messages.create({ from: FROM, to: `whatsapp:${to}`, body: message });
+  } catch (err) {
+    console.error('WhatsApp send error:', err);
+  }
+}
 
 // ─────────────────────────────────────────
 // GET /api/meals?date=YYYY-MM-DD
@@ -58,7 +70,46 @@ router.post('/', auth, (req, res) => {
   );
 
   const inserted = db.prepare('SELECT * FROM meals WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json({ message: 'Food added!', meal: inserted });
+
+  // Calculate updated totals for the day
+  const meals = db.prepare(`
+    SELECT * FROM meals WHERE user_id = ? AND date = ? ORDER BY created_at ASC
+  `).all(req.user.id, mealDate);
+
+  const totals = meals.reduce((acc, m) => ({
+    calories: acc.calories + m.calories,
+    protein:  acc.protein  + m.protein,
+    carbs:    acc.carbs    + m.carbs,
+    fat:      acc.fat      + m.fat
+  }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+  // Get adjusted target
+  const profile = db.prepare('SELECT * FROM profiles WHERE user_id = ?').get(req.user.id);
+  const adjustedTarget = getAdjustedCalTarget(req.user.id, mealDate, profile?.cal_target || 2000);
+
+  const remaining = adjustedTarget - totals.calories;
+  const overflow = totals.calories > adjustedTarget ? totals.calories - adjustedTarget : 0;
+
+  let message = 'Food added!';
+  if (overflow > 0) {
+    message += ` ⚠️ You've exceeded your target by ${overflow} kcal today.`;
+    // Send WhatsApp notification
+    const user = db.prepare('SELECT phone FROM users WHERE id = ?').get(req.user.id);
+    if (user?.phone) {
+      sendWhatsApp(user.phone, `⚠️ Calorie Overflow Alert!\n\nYou added ${food_name} (${calories} kcal) and exceeded your daily target by ${overflow} kcal.\n\nTotal today: ${totals.calories}/${adjustedTarget} kcal\n\nStay disciplined! 💪`);
+    }
+  } else {
+    message += ` ✅ ${remaining} kcal remaining for today.`;
+  }
+
+  res.status(201).json({
+    message,
+    meal: inserted,
+    totals,
+    adjustedTarget,
+    remaining,
+    overflow
+  });
 });
 
 // ─────────────────────────────────────────

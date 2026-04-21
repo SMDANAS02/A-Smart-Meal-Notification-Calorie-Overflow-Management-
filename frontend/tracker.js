@@ -1,3 +1,82 @@
+const API_BASE = 'http://localhost:3000/api';
+const token = localStorage.getItem('fitai_token');
+if (!token) window.location.href = 'login.html';
+
+async function loadFromBackend() {
+  try {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+    // Profile load
+    const profileRes = await fetch(`${API_BASE}/profile`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const profileData = await profileRes.json();
+    if (profileData.profile) {
+      const p = profileData.profile;
+      STATE.targets = {
+        calories: p.cal_target    || 2000,
+        protein:  p.protein_target || 150,
+        carbs:    p.carbs_target   || 225,
+        fat:      p.fat_target     || 56
+      };
+      STATE.waterGoal = p.water_target || 8;
+      STATE.mealCount = p.meal_count   || 3;
+    }
+    if (profileData.user) {
+      STATE.user = { name: profileData.user.name, goal: profileData.profile?.goal || 'maintain' };
+    }
+
+    // Meals load
+    const mealsRes = await fetch(`${API_BASE}/meals?date=${today}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const mealsData = await mealsRes.json();
+    if (mealsData.meals && mealsData.meals.length > 0) {
+      // Group meals by meal_name
+      const grouped = {};
+      mealsData.meals.forEach(m => {
+        const key = m.meal_name || 'General';
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push({
+          name:    m.food_name,
+          cal:     m.calories,
+          qty:     1,
+          protein: m.protein || 0,
+          carbs:   m.carbs   || 0,
+          fat:     m.fat     || 0,
+          id:      m.id
+        });
+      });
+      // Map to STATE.meals
+      if (STATE.meals) {
+        STATE.meals.forEach(meal => {
+          const foods = grouped[meal.name] || grouped['General'] || [];
+          if (foods.length > 0 && meal.foods.length === 0) {
+            meal.foods = foods;
+          }
+        });
+      }
+    }
+
+    // Water load
+    const waterRes = await fetch(`${API_BASE}/water?date=${today}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const waterData = await waterRes.json();
+    if (waterData.glasses !== undefined) {
+      STATE.water = waterData.glasses;
+    }
+
+    // Update UI
+    setupNav();
+    setupWater();
+    buildMeals();
+    updateAllStats();
+
+  } catch (err) {
+    console.error('Backend load failed:', err);
+  }
+}
 const STATE = {
   user:      JSON.parse(localStorage.getItem('fitai_user'))    || { name: 'User', goal: 'maintain' },
   targets:   JSON.parse(localStorage.getItem('fitai_targets')) || { calories: 2000, protein: 150, carbs: 225, fat: 56 },
@@ -6,6 +85,58 @@ const STATE = {
   water:     parseInt(localStorage.getItem('fitai_water'))     || 0,
   waterGoal: 8,
 };
+
+// ─────────────────────────────────────────
+// BACKEND SYNC FUNCTIONS
+// ─────────────────────────────────────────
+async function saveMealsToBackend() {
+  if (!STATE.meals || STATE.meals.length === 0) return;
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  try {
+    const meals = STATE.meals.flatMap(meal =>
+      meal.foods.map(food => ({
+        date: today,
+        meal_name: meal.name,
+        food_name: food.name,
+        calories: food.cal || 0,
+        protein: food.protein || 0,
+        carbs: food.carbs || 0,
+        fat: food.fat || 0,
+        quantity: food.qty || 1,
+        unit: 'serving'
+      }))
+    );
+
+    for (const meal of meals) {
+      await fetch(`${API_BASE}/meals`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(meal)
+      });
+    }
+  } catch (err) {
+    console.error('Save meals to backend failed:', err);
+  }
+}
+
+async function saveWaterToBackend() {
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  try {
+    await fetch(`${API_BASE}/water`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ date: today, glasses: STATE.water })
+    });
+  } catch (err) {
+    console.error('Save water failed:', err);
+  }
+}
 
 const MEAL_TEMPLATES = {
   2: [
@@ -173,8 +304,90 @@ let activeMealIndex = null;
 let aiNutritionData = null;
 
 window.addEventListener('DOMContentLoaded', () => {
-  setupNav(); setupWater(); buildMeals(); updateAllStats(); setDate(); checkOnLoadDebt();
+  setDate();
+  checkOnLoadDebt();
+  loadBackendData();
+  // Auto refresh every 30 seconds
+  setInterval(loadBackendData, 30000);
 });
+
+async function loadBackendData() {
+  try {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+    // 1. Profile load
+    const pRes  = await fetch(`${API_BASE}/profile`, { headers: { 'Authorization': `Bearer ${token}` } });
+    const pData = await pRes.json();
+    if (pData.profile) {
+      STATE.targets = {
+        calories: pData.profile.cal_target     || 2000,
+        protein:  pData.profile.protein_target || 150,
+        carbs:    pData.profile.carbs_target   || 225,
+        fat:      pData.profile.fat_target     || 56
+      };
+      STATE.waterGoal = pData.profile.water_target || 8;
+      STATE.mealCount = pData.profile.meal_count   || 3;
+    }
+    if (pData.user) {
+      STATE.user = { name: pData.user.name, goal: pData.profile?.goal || 'maintain' };
+    }
+
+    // 2. Initialize meal structure WITHOUT clearing foods
+    const templates = MEAL_TEMPLATES[STATE.mealCount];
+    const totalCal  = STATE.targets.calories;
+    if (!STATE.meals || STATE.meals.length !== STATE.mealCount) {
+      STATE.meals = templates.map(t => ({ 
+        name: t.name, time: t.time, icon: t.icon, 
+        target: Math.round(totalCal * t.ratio), 
+        foods: [] 
+      }));
+    } else {
+      // Update targets only, DON'T clear foods yet
+      STATE.meals.forEach((meal, i) => {
+        meal.target = Math.round(totalCal * templates[i].ratio);
+      });
+    }
+
+    // 3. Meals load from backend
+    const mRes  = await fetch(`${API_BASE}/meals?date=${today}`, { headers: { 'Authorization': `Bearer ${token}` } });
+    const mData = await mRes.json();
+    if (mData.meals && mData.meals.length > 0) {
+      // Clear existing foods ONLY when loading backend data
+      STATE.meals.forEach(m => m.foods = []);
+      // Add foods from backend
+      mData.meals.forEach(m => {
+        const meal = STATE.meals.find(sm => sm.name === m.meal_name) || STATE.meals[0];
+        if (meal) {
+          meal.foods.push({
+            name:    m.food_name,
+            cal:     m.calories  || 0,
+            qty:     1,
+            protein: m.protein   || 0,
+            carbs:   m.carbs     || 0,
+            fat:     m.fat       || 0,
+            id:      m.id
+          });
+        }
+      });
+    }
+
+    // 4. Water load
+    const wRes  = await fetch(`${API_BASE}/water?date=${today}`, { headers: { 'Authorization': `Bearer ${token}` } });
+    const wData = await wRes.json();
+    if (wData.glasses !== undefined) STATE.water = wData.glasses;
+
+    // 5. Update all UI
+    setupNav();
+    setupWater();
+    renderMeals();
+    updateAllStats();
+
+  } catch (err) {
+    console.error('Backend load failed:', err);
+    // Fallback to localStorage
+    setupNav(); setupWater(); buildMeals(); updateAllStats();
+  }
+}
 
 function checkOnLoadDebt() {
   const debt = JSON.parse(localStorage.getItem('fitai_caldebt') || 'null');
@@ -204,12 +417,12 @@ function renderWater() {
     const g = document.createElement('div');
     g.className = 'water-glass' + (i < STATE.water ? ' filled' : '');
     g.innerHTML = i < STATE.water ? '💧' : ''; g.style.fontSize = '12px';
-    g.onclick = () => { STATE.water = (i < STATE.water) ? i : i + 1; localStorage.setItem('fitai_water', STATE.water); renderWater(); };
+    g.onclick = () => { STATE.water = (i < STATE.water) ? i : i + 1; localStorage.setItem('fitai_water', STATE.water); renderWater(); saveWaterToBackend();};
     wrap.appendChild(g);
   }
 }
 function addWater() {
-  if (STATE.water < STATE.waterGoal) { STATE.water++; localStorage.setItem('fitai_water', STATE.water); renderWater(); }
+  if (STATE.water < STATE.waterGoal) { STATE.water++; localStorage.setItem('fitai_water', STATE.water); renderWater();saveWaterToBackend(); }
 }
 
 function changeMealCount(delta) {
@@ -228,8 +441,17 @@ function buildMeals() {
   const templates = MEAL_TEMPLATES[STATE.mealCount];
   const totalCal  = STATE.targets.calories;
   if (!STATE.meals || STATE.meals.length !== STATE.mealCount) {
-    STATE.meals = templates.map(t => ({ name: t.name, time: t.time, icon: t.icon, target: Math.round(totalCal * t.ratio), foods: [] }));
-    localStorage.setItem('fitai_meals', JSON.stringify(STATE.meals));
+    STATE.meals = templates.map(t => ({ 
+      name: t.name, time: t.time, icon: t.icon, 
+      target: Math.round(totalCal * t.ratio), 
+      foods: [] 
+    }));
+  } else {
+    // Update targets only, keep foods intact
+    STATE.meals.forEach((meal, i) => {
+      meal.target = Math.round(totalCal * templates[i].ratio);
+      // DON'T clear meal.foods here
+    });
   }
   renderMeals();
 }
@@ -372,13 +594,13 @@ function logFood() {
     protein: aiNutritionData.protein, carbs: aiNutritionData.carbs, fat: aiNutritionData.fat,
   });
   localStorage.setItem('fitai_meals', JSON.stringify(STATE.meals));
-  closeModal(); renderMeals(); updateAllStats(); checkAndBalanceCalories(); aiNutritionData = null;
+  closeModal(); renderMeals(); updateAllStats(); checkAndBalanceCalories(); aiNutritionData = null;saveMealsToBackend();
 }
 
 function deleteFood(mealIdx, foodIdx) {
   STATE.meals[mealIdx].foods.splice(foodIdx, 1);
   localStorage.setItem('fitai_meals', JSON.stringify(STATE.meals));
-  renderMeals(); updateAllStats(); checkAndBalanceCalories();
+  renderMeals(); updateAllStats(); checkAndBalanceCalories();saveMealsToBackend();
 }
 
 function updateAllStats() {
@@ -435,7 +657,7 @@ function quickAddRec(name, cal, protein, carbs, fat) {
   STATE.meals.forEach((m, i) => { const eaten = m.foods.reduce((s,f) => s + (f.cal*f.qty), 0); if (m.target - eaten > bestRem) { bestRem = m.target - eaten; bestIdx = i; } });
   STATE.meals[bestIdx].foods.push({ name, cal, qty: 1, protein, carbs, fat });
   localStorage.setItem('fitai_meals', JSON.stringify(STATE.meals));
-  renderMeals(); updateAllStats(); checkAndBalanceCalories();
+  renderMeals(); updateAllStats(); checkAndBalanceCalories();saveMealsToBackend();
 }
 
 document.addEventListener('keydown', e => {
@@ -612,7 +834,7 @@ function addToTracker() {
   txScanHistory.unshift(historyItem);
   if (txScanHistory.length>20) txScanHistory.pop();
   localStorage.setItem('fitai_scanhistory', JSON.stringify(txScanHistory));
-  renderMeals(); updateAllStats(); checkAndBalanceCalories(); closeTextract(); resetScan();
+  renderMeals(); updateAllStats(); checkAndBalanceCalories(); closeTextract(); resetScan();saveMealsToBackend();
 }
 
 function resetScan() {

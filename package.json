@@ -2,10 +2,11 @@
   "name": "smart-meal-overflow",
   "version": "1.0.0",
   "description": "- **Node.js + Express** — REST API - **SQLite (better-sqlite3)** — Local database - **JWT** — Authentication - **bcryptjs** — Password hashing - **Nodemailer** — Email notifications",
-  "main": "auth (1).js",
+  "main": "backend/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "start": "node backend/server.js"
   },
   "repository": {
     "type": "git",
@@ -20,12 +21,21 @@
   },
   "homepage": "https://github.com/SMDANAS02/A-Smart-Meal-Notification-Calorie-Overflow-Management-#readme",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.6.2",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "google-auth-library": "^10.6.2",
     "jsonwebtoken": "^9.0.3",
-    "nodemailer": "^8.0.2"
+    "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.2",
+    "twilio": "^5.13.1"
+  },
+  "devDependencies": {
+    "fast-check": "^4.7.0",
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2"
   }
 }

@@ -1,1 +1,10 @@
 ﻿.env
+
+# Ignore generated and local files
+node_modules/
+*.db
+*.db-shm
+*.db-wal
+.vscode/
+.kiro/
+google acuth.json
