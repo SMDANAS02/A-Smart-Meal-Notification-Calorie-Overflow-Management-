@@ -1,20 +1,33 @@
 // db.js — SQLite Database Setup
-const Database = require('better-sqlite3');
-const path = require('path');
+const Database = require("better-sqlite3");
+const path = require("path");
+const fs = require("fs");
 
-const DB_PATH = path.join(__dirname, 'fitai.db');
+// Decide database path
+const DB_PATH =
+  process.env.NODE_ENV === "production"
+    ? "/data/fitai.db"
+    : path.join(__dirname, "fitai.db");
+
+// Ensure /data directory exists in production
+if (process.env.NODE_ENV === "production") {
+  if (!fs.existsSync("/data")) {
+    fs.mkdirSync("/data", { recursive: true });
+  }
+}
+
 const db = new Database(DB_PATH);
 
-// Enable WAL mode for better performance
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+// Performance settings
+db.pragma("journal_mode = WAL");
+db.pragma("foreign_keys = ON");
+db.pragma("synchronous = NORMAL");
 
 // ─────────────────────────────────────────
 // CREATE TABLES
 // ─────────────────────────────────────────
 
 db.exec(`
-  -- USERS TABLE
   CREATE TABLE IF NOT EXISTS users (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     name        TEXT    NOT NULL,
@@ -24,7 +37,6 @@ db.exec(`
     created_at  TEXT    DEFAULT (datetime('now'))
   );
 
-  -- USER PROFILE / TARGETS TABLE
   CREATE TABLE IF NOT EXISTS profiles (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id         INTEGER NOT NULL UNIQUE,
@@ -32,8 +44,8 @@ db.exec(`
     gender          TEXT,
     height_cm       REAL,
     weight_kg       REAL,
-    goal            TEXT,         -- lose / maintain / gain
-    activity_level  TEXT,         -- sedentary / light / moderate / active
+    goal            TEXT,
+    activity_level  TEXT,
     cal_target      INTEGER DEFAULT 2000,
     protein_target  INTEGER DEFAULT 150,
     carbs_target    INTEGER DEFAULT 200,
@@ -44,12 +56,11 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
-  -- MEALS TABLE (daily food log)
   CREATE TABLE IF NOT EXISTS meals (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id     INTEGER NOT NULL,
-    date        TEXT    NOT NULL,   -- YYYY-MM-DD
-    meal_name   TEXT    NOT NULL,   -- Breakfast / Lunch / Dinner / Snack
+    date        TEXT    NOT NULL,
+    meal_name   TEXT    NOT NULL,
     food_name   TEXT    NOT NULL,
     calories    REAL    NOT NULL DEFAULT 0,
     protein     REAL    DEFAULT 0,
@@ -61,20 +72,18 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
-  -- CALORIE DEBT TABLE (overflow carry-forward)
   CREATE TABLE IF NOT EXISTS calorie_debt (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id     INTEGER NOT NULL,
-    debt_date   TEXT    NOT NULL,   -- date overflow happened
-    over_cal    REAL    NOT NULL,   -- how much over
-    split_days  INTEGER NOT NULL,   -- 2 or 3 days
-    per_day     REAL    NOT NULL,   -- deduction per day
-    cleared     INTEGER DEFAULT 0, -- 0=active, 1=cleared
+    debt_date   TEXT    NOT NULL,
+    over_cal    REAL    NOT NULL,
+    split_days  INTEGER NOT NULL,
+    per_day     REAL    NOT NULL,
+    cleared     INTEGER DEFAULT 0,
     created_at  TEXT    DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
-  -- PROGRESS TABLE (weight/measurements log)
   CREATE TABLE IF NOT EXISTS progress (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id     INTEGER NOT NULL,
@@ -90,16 +99,14 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
-  -- DIET PLAN TABLE
   CREATE TABLE IF NOT EXISTS diet_plans (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id     INTEGER NOT NULL UNIQUE,
-    plan_data   TEXT    NOT NULL,   -- JSON string
+    plan_data   TEXT    NOT NULL,
     generated_at TEXT   DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
-  -- WATER LOG TABLE
   CREATE TABLE IF NOT EXISTS water_log (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id     INTEGER NOT NULL,
@@ -110,5 +117,6 @@ db.exec(`
   );
 `);
 
-console.log('✅ Database connected:', DB_PATH);
+console.log("✅ Database connected:", DB_PATH);
+
 module.exports = db;

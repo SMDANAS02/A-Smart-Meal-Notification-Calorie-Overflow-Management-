@@ -2,11 +2,11 @@
   "name": "smart-meal-overflow",
   "version": "1.0.0",
   "description": "- **Node.js + Express** — REST API - **SQLite (better-sqlite3)** — Local database - **JWT** — Authentication - **bcryptjs** — Password hashing - **Nodemailer** — Email notifications",
-  "main": "backend/server.js",
+  "main": "server.js",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
-    "start": "node backend/server.js"
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",
@@ -23,7 +23,6 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.6.2",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
@@ -31,6 +30,7 @@
     "jsonwebtoken": "^9.0.3",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.2",
+    "pg": "^8.20.0",
     "twilio": "^5.13.1"
   },
   "devDependencies": {
