@@ -3,84 +3,14 @@ const token = localStorage.getItem('fitai_token');
 if (!token) window.location.href = 'login.html';
 
 async function loadFromBackend() {
-  try {
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-
-    // Profile load
-    const profileRes = await fetch(`${API_BASE}/profile`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const profileData = await profileRes.json();
-    if (profileData.profile) {
-      const p = profileData.profile;
-      STATE.targets = {
-        calories: p.cal_target    || 2000,
-        protein:  p.protein_target || 150,
-        carbs:    p.carbs_target   || 225,
-        fat:      p.fat_target     || 56
-      };
-      STATE.waterGoal = p.water_target || 8;
-      STATE.mealCount = p.meal_count   || 3;
-    }
-    if (profileData.user) {
-      STATE.user = { name: profileData.user.name, goal: profileData.profile?.goal || 'maintain' };
-    }
-
-    // Meals load
-    const mealsRes = await fetch(`${API_BASE}/meals?date=${today}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const mealsData = await mealsRes.json();
-    if (mealsData.meals) {
-      // Group meals by meal_name
-      const grouped = {};
-      mealsData.meals.forEach(m => {
-        const key = (m.meal_name || 'snack').toLowerCase();
-        if (!grouped[key]) grouped[key] = [];
-        grouped[key].push({
-          name:    m.food_name,
-          cal:     m.calories,
-          qty:     m.quantity || 1,
-          protein: m.protein  || 0,
-          carbs:   m.carbs    || 0,
-          fat:     m.fat      || 0,
-          id:      m.id
-        });
-      });
-      // Map to STATE.meals cleanly
-      if (STATE.meals) {
-        STATE.meals.forEach(meal => {
-          const mKey = (meal.name || '').toLowerCase();
-          meal.foods = grouped[mKey] || [];
-        });
-      }
-    }
-
-    // Water load
-    const waterRes = await fetch(`${API_BASE}/water?date=${today}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const waterData = await waterRes.json();
-    if (waterData.glasses !== undefined) {
-      STATE.water = waterData.glasses;
-    }
-
-    // Update UI
-    setupNav();
-    setupWater();
-    buildMeals();
-    updateAllStats();
-
-  } catch (err) {
-    console.error('Backend load failed:', err);
-  }
+  return await loadBackendData();
 }
 
 // Expose globally and listen for live AI updates
 window.loadFromBackend = loadFromBackend;
-window.loadBackendData = loadFromBackend;
+window.loadBackendData = loadBackendData;
 window.addEventListener('fitai:data-updated', () => {
-  loadFromBackend();
+  loadBackendData();
 });
 const STATE = {
   user:      JSON.parse(localStorage.getItem('fitai_user'))    || { name: 'User', goal: 'maintain' },
@@ -331,14 +261,15 @@ async function loadBackendData() {
     STATE.meals.forEach(m => m.foods = []);
     
     if (mData.meals && mData.meals.length > 0) {
-      // Add foods from backend
+      // Add foods from backend with case-insensitive meal matching
       mData.meals.forEach(m => {
-        const meal = STATE.meals.find(sm => sm.name === m.meal_name) || STATE.meals[0];
+        const mNameLower = (m.meal_name || '').toLowerCase().trim();
+        const meal = STATE.meals.find(sm => (sm.name || '').toLowerCase().trim() === mNameLower) || STATE.meals[0];
         if (meal) {
           meal.foods.push({
             name:    m.food_name,
             cal:     m.calories  || 0,
-            qty:     1,
+            qty:     m.quantity  || 1,
             protein: m.protein   || 0,
             carbs:   m.carbs     || 0,
             fat:     m.fat       || 0,
@@ -356,8 +287,14 @@ async function loadBackendData() {
     // 5. Update all UI
     setupNav();
     setupWater();
+    buildMeals();
     renderMeals();
     updateAllStats();
+
+    // Cache updated state in localStorage for fast offline/refresh fallback
+    localStorage.setItem('fitai_meals', JSON.stringify(STATE.meals));
+    localStorage.setItem('fitai_targets', JSON.stringify(STATE.targets));
+    localStorage.setItem('fitai_water', STATE.water);
 
   } catch (err) {
     console.error('Backend load failed:', err);
