@@ -1,9 +1,14 @@
+const API_BASE = 'http://localhost:3000/api';
+const token = localStorage.getItem('fitai_token');
+
 const STATE = {
   user:     JSON.parse(localStorage.getItem('fitai_user'))     || { name: 'User', goal: 'maintain' },
   targets:  JSON.parse(localStorage.getItem('fitai_targets'))  || { calories: 2000, protein: 150, carbs: 225, fat: 56 },
   plan:     JSON.parse(localStorage.getItem('fitai_dietplan')) || {},
   dietType: 'all',
   mealSize: 'balanced',
+  allFoods: [],
+  foodsByMeal: { breakfast: [], lunch: [], dinner: [], snack: [] },
 };
 
 const MEAL_DB = {
@@ -93,11 +98,111 @@ const MEAL_SECTIONS = [
 let activeRecipe  = null;
 let activeMealKey = null;
 
-window.addEventListener('DOMContentLoaded', () => {
+// Load all foods from database
+async function loadFoodsFromDatabase() {
+  console.log('🔄 Loading foods from database...');
+  try {
+    const response = await fetch(`${API_BASE}/foods`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    console.log('📡 API Response Status:', response.status);
+    
+    if (!response.ok) {
+      console.error('❌ Failed to fetch foods:', response.statusText);
+      throw new Error('Failed to fetch foods');
+    }
+    
+    const data = await response.json();
+    STATE.allFoods = data.foods || [];
+    
+    console.log(`✅ Loaded ${STATE.allFoods.length} foods from database`);
+    
+    // Categorize foods by meal type based on calories and name
+    STATE.allFoods.forEach(food => {
+      const foodItem = {
+        id: `food-${food.id}`,
+        name: food.name,
+        type: determineFoodType(food.name),
+        cal: food.calories,
+        protein: food.protein,
+        carbs: food.carbs,
+        fat: food.fat,
+        unit: food.unit,
+        prepTime: '5 min',
+        servings: 1,
+        ingredients: [`1 ${food.unit} ${food.name}`],
+        steps: [`Prepare 1 ${food.unit} of ${food.name}`]
+      };
+      
+      // Categorize by calories range
+      if (food.calories < 200) {
+        STATE.foodsByMeal.snack.push(foodItem);
+      }
+      if (food.calories >= 150 && food.calories <= 350) {
+        STATE.foodsByMeal.breakfast.push(foodItem);
+      }
+      if (food.calories >= 250 && food.calories <= 550) {
+        STATE.foodsByMeal.lunch.push(foodItem);
+      }
+      if (food.calories >= 200 && food.calories <= 500) {
+        STATE.foodsByMeal.dinner.push(foodItem);
+      }
+    });
+    
+    console.log(`📊 Categorized foods:`, {
+      breakfast: STATE.foodsByMeal.breakfast.length,
+      lunch: STATE.foodsByMeal.lunch.length,
+      dinner: STATE.foodsByMeal.dinner.length,
+      snack: STATE.foodsByMeal.snack.length
+    });
+  } catch (err) {
+    console.error('❌ Error loading foods:', err);
+    console.log('⚠️ Falling back to hardcoded meals');
+    // Fallback to hardcoded meals if API fails
+    STATE.foodsByMeal = { ...MEAL_DB };
+  }
+}
+
+// Determine food type based on name
+function determineFoodType(name) {
+  const lowerName = name.toLowerCase();
+  
+  // Non-veg indicators
+  if (['chicken', 'mutton', 'beef', 'fish', 'prawn', 'shrimp', 'egg', 'meat', 'salmon', 'tuna', 'turkey', 'bacon', 'ham', 'sausage', 'crab', 'lobster'].some(word => lowerName.includes(word))) {
+    return 'nonveg';
+  }
+  
+  // Veg indicators
+  if (['paneer', 'dal', 'chole', 'rajma', 'milk', 'curd', 'yogurt', 'cheese', 'butter', 'ghee'].some(word => lowerName.includes(word))) {
+    return 'veg';
+  }
+  
+  // Vegan indicators
+  if (['tofu', 'quinoa', 'oats', 'fruit', 'vegetable', 'salad', 'smoothie', 'juice', 'rice', 'bread', 'roti', 'chapati'].some(word => lowerName.includes(word))) {
+    return 'vegan';
+  }
+  
+  // Default to veg
+  return 'veg';
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  console.log('🚀 Diet page loading...');
+  console.log('🔑 Auth token:', token ? 'EXISTS' : 'MISSING');
+  
   setupNav();
+  
+  // Show loading state
+  const container = document.getElementById('mealsContainer');
+  container.innerHTML = '<div style="padding: 40px; text-align: center; color: #666; font-size: 14px;">Loading foods from database...</div>';
+  
+  await loadFoodsFromDatabase();
   renderMealSections();
   updateSummary();
   updateShoppingList();
+  
+  console.log('✅ Diet page loaded successfully');
 });
 
 function setupNav() {
@@ -130,20 +235,23 @@ function renderMealSections() {
   container.innerHTML = '';
 
   MEAL_SECTIONS.forEach((section, sIdx) => {
-    const targetCal   = Math.round(STATE.targets.calories * section.ratio);
+    const targetCal    = Math.round(STATE.targets.calories * section.ratio);
     const selectedMeal = STATE.plan[section.key] || null;
     const selectedCal  = selectedMeal ? selectedMeal.cal : 0;
 
-    let meals = MEAL_DB[section.key] || [];
+    let meals = STATE.foodsByMeal[section.key] || [];
     if (STATE.dietType !== 'all') meals = meals.filter(m => m.type === STATE.dietType);
     if (STATE.mealSize === 'light') meals = meals.filter(m => m.cal <= targetCal * 0.9);
     if (STATE.mealSize === 'heavy') meals = meals.filter(m => m.cal >= targetCal * 0.7);
+
+    // First section open by default, rest collapsed
+    const isOpen = sIdx === 0;
 
     const sec = document.createElement('div');
     sec.className = 'meal-section';
     sec.style.animationDelay = (sIdx * 0.08) + 's';
     sec.innerHTML = `
-      <div class="meal-section-header">
+      <div class="meal-section-header meal-section-toggle" onclick="toggleSection('${section.key}')" id="hdr-${section.key}">
         <div class="msh-left">
           <div class="meal-type-icon">${section.icon}</div>
           <div>
@@ -156,47 +264,108 @@ function renderMealSections() {
             <div class="msh-cal-badge">${selectedCal}</div>
             <div class="msh-cal-target">/ ${targetCal} KCAL TARGET</div>
           </div>
+          <button class="msh-toggle-btn ${isOpen ? 'msh-toggle-btn--open' : ''}" aria-label="Toggle ${section.name}">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M2 4.5L7 9.5L12 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
         </div>
       </div>
-      <div class="meal-cards-grid" id="grid-${section.key}"></div>`;
+      <div class="food-list ${isOpen ? 'food-list--open' : ''}" id="list-${section.key}"></div>`;
     container.appendChild(sec);
 
-    const grid = sec.querySelector(`#grid-${section.key}`);
+    const list = sec.querySelector(`#list-${section.key}`);
     if (meals.length === 0) {
-      grid.innerHTML = `<div class="meal-empty-slot">No meals match your filter.</div>`;
+      list.innerHTML = `<div class="meal-empty-slot">No meals match your filter.</div>`;
       return;
     }
 
     meals.forEach(meal => {
       const isSelected = selectedMeal && selectedMeal.id === meal.id;
-      const card = document.createElement('div');
-      card.className = 'meal-option-card' + (isSelected ? ' selected' : '');
-      card.innerHTML = `
-        <div class="selected-tick">✓</div>
-        <div class="moc-top">
-          <div class="moc-name">${meal.name}</div>
-          <span class="moc-type-badge badge-${meal.type}">${meal.type.toUpperCase()}</span>
+      const row = document.createElement('div');
+      row.className = 'food-row' + (isSelected ? ' food-row--selected' : '');
+      row.innerHTML = `
+        <div class="fr-left">
+          <span class="fr-name">${meal.name}</span>
+          <span class="fr-badge badge-${meal.type}">${meal.type.toUpperCase()}</span>
         </div>
-        <div class="moc-cal">${meal.cal}</div>
-        <div class="moc-cal-unit">KCAL PER SERVING</div>
-        <div class="moc-macros">
-          <span class="moc-macro"><strong>P:</strong> ${meal.protein}g</span>
-          <span class="moc-macro"><strong>C:</strong> ${meal.carbs}g</span>
-          <span class="moc-macro"><strong>F:</strong> ${meal.fat}g</span>
+        <div class="fr-macros">
+          <span class="fr-macro"><strong>P:</strong> ${meal.protein}g</span>
+          <span class="fr-macro"><strong>C:</strong> ${meal.carbs}g</span>
+          <span class="fr-macro"><strong>F:</strong> ${meal.fat}g</span>
         </div>
-        <div class="moc-actions">
-          <button class="moc-recipe-btn" onclick="openRecipe('${meal.id}','${section.key}')">VIEW RECIPE</button>
-          <button class="moc-select-btn" onclick="selectMeal('${section.key}','${meal.id}')">
+        <div class="fr-right">
+          <div class="fr-cal">${meal.cal} <span class="fr-unit">kcal</span></div>
+          <button class="fr-recipe-btn" onclick="event.stopPropagation();openRecipe('${meal.id}','${section.key}')">RECIPE</button>
+          <button class="fr-select-btn ${isSelected ? 'fr-select-btn--active' : ''}" onclick="event.stopPropagation();selectMeal('${section.key}','${meal.id}')">
             ${isSelected ? '✓ SELECTED' : 'SELECT'}
           </button>
         </div>`;
-      grid.appendChild(card);
+      list.appendChild(row);
     });
   });
 }
 
+// Toggle accordion open/closed
+function toggleSection(key) {
+  const list   = document.getElementById(`list-${key}`);
+  const header = document.getElementById(`hdr-${key}`);
+  if (!list || !header) return;
+  const btn = header.querySelector('.msh-toggle-btn');
+  const isOpen = list.classList.contains('food-list--open');
+  if (isOpen) {
+    list.classList.remove('food-list--open');
+    btn && btn.classList.remove('msh-toggle-btn--open');
+  } else {
+    list.classList.add('food-list--open');
+    btn && btn.classList.add('msh-toggle-btn--open');
+  }
+}
+
+
+
+// Setup carousel — uses scrollLeft on the wrapper for reliable cross-size scrolling
+function setupCarousel(mealKey) {
+  const prevBtn  = document.querySelector(`.carousel-prev[data-meal="${mealKey}"]`);
+  const nextBtn  = document.querySelector(`.carousel-next[data-meal="${mealKey}"]`);
+  const wrapper  = document.getElementById(`wrapper-${mealKey}`);
+  const grid     = document.getElementById(`grid-${mealKey}`);
+
+  if (!prevBtn || !nextBtn || !wrapper || !grid) return;
+
+  const SCROLL_AMOUNT = () => {
+    // Scroll by the width of one card + gap, read from DOM for accuracy
+    const firstCard = grid.querySelector('.meal-option-card');
+    if (!firstCard) return 272;
+    const style = window.getComputedStyle(grid);
+    const gap   = parseFloat(style.gap) || 12;
+    return firstCard.offsetWidth + gap;
+  };
+
+  const updateButtons = () => {
+    prevBtn.classList.toggle('disabled', wrapper.scrollLeft <= 0);
+    nextBtn.classList.toggle('disabled', wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 4);
+  };
+
+  prevBtn.onclick = () => {
+    wrapper.scrollBy({ left: -SCROLL_AMOUNT(), behavior: 'smooth' });
+    setTimeout(updateButtons, 420);
+  };
+
+  nextBtn.onclick = () => {
+    wrapper.scrollBy({ left: SCROLL_AMOUNT(), behavior: 'smooth' });
+    setTimeout(updateButtons, 420);
+  };
+
+  wrapper.addEventListener('scroll', updateButtons, { passive: true });
+  updateButtons();
+}
+
 function selectMeal(mealKey, mealId) {
-  const meal = Object.values(MEAL_DB).flat().find(m => m.id === mealId);
+  // Find meal in database foods
+  const meal = Object.values(STATE.foodsByMeal).flat().find(m => m.id === mealId);
+  if (!meal) return;
+  
   if (STATE.plan[mealKey] && STATE.plan[mealKey].id === mealId) {
     delete STATE.plan[mealKey];
   } else {
@@ -211,7 +380,7 @@ function selectMeal(mealKey, mealId) {
 
 function generateFullPlan() {
   MEAL_SECTIONS.forEach(section => {
-    let meals = MEAL_DB[section.key] || [];
+    let meals = STATE.foodsByMeal[section.key] || [];
     if (STATE.dietType !== 'all') meals = meals.filter(m => m.type === STATE.dietType);
     if (meals.length > 0) STATE.plan[section.key] = meals[Math.floor(Math.random() * meals.length)];
   });
@@ -287,7 +456,7 @@ function copyShoppingList() {
 }
 
 function openRecipe(mealId, mealKey) {
-  const meal = Object.values(MEAL_DB).flat().find(m => m.id === mealId);
+  const meal = Object.values(STATE.foodsByMeal).flat().find(m => m.id === mealId);
   if (!meal) return;
   activeRecipe  = meal;
   activeMealKey = mealKey;
@@ -321,7 +490,7 @@ function closeRecipe() {
 
 function swapMeal() {
   if (!activeMealKey || !activeRecipe) return;
-  let meals = MEAL_DB[activeMealKey].filter(m => m.id !== activeRecipe.id);
+  let meals = STATE.foodsByMeal[activeMealKey].filter(m => m.id !== activeRecipe.id);
   if (STATE.dietType !== 'all') meals = meals.filter(m => m.type === STATE.dietType);
   if (!meals.length) return;
   openRecipe(meals[Math.floor(Math.random() * meals.length)].id, activeMealKey);

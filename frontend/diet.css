@@ -119,41 +119,97 @@ html, body { height: 100%; background: var(--black); font-family: 'Barlow', sans
 
 /* Meal Section */
 .meal-section { background: var(--card); border: 1px solid var(--border); border-radius: 2px; overflow: hidden; opacity: 0; animation: fadeUp 0.4s ease forwards; }
-.meal-section-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); background: rgba(232,0,13,0.02); }
+.meal-section-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: rgba(232,0,13,0.02); }
+.meal-section-toggle { cursor: pointer; transition: background 0.15s; user-select: none; }
+.meal-section-toggle:hover { background: rgba(255,255,255,0.02); }
 .msh-left { display: flex; align-items: center; gap: 14px; }
 .meal-type-icon { width: 40px; height: 40px; border-radius: 50%; background: rgba(232,0,13,0.08); border: 1px solid rgba(232,0,13,0.2); display: flex; align-items: center; justify-content: center; font-size: 18px; }
 .meal-type-name { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 3px; color: white; }
 .meal-type-time { font-size: 10px; color: #333; letter-spacing: 1px; margin-top: 2px; }
-.msh-right { display: flex; align-items: center; gap: 12px; }
+.msh-right { display: flex; align-items: center; gap: 16px; }
 .msh-cal-badge  { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--red); }
 .msh-cal-target { font-size: 10px; color: #333; letter-spacing: 1px; }
 
-.meal-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1px; background: var(--border); }
+/* Toggle chevron button */
+.msh-toggle-btn {
+  width: 32px; height: 32px; flex-shrink: 0;
+  background: rgba(255,255,255,0.04); border: 1px solid #1a1a1a;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  color: #444; cursor: pointer; transition: all 0.25s;
+}
+.msh-toggle-btn svg { transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+.msh-toggle-btn--open { background: rgba(232,0,13,0.08); border-color: rgba(232,0,13,0.25); color: var(--red); }
+.msh-toggle-btn--open svg { transform: rotate(180deg); }
+.meal-section-toggle:hover .msh-toggle-btn { border-color: rgba(232,0,13,0.2); color: #888; }
 
-/* Meal Option Card */
-.meal-option-card { background: var(--card2); padding: 16px; cursor: pointer; transition: background 0.2s; position: relative; }
-.meal-option-card:hover { background: #131313; }
-.meal-option-card.selected { background: rgba(232,0,13,0.05); border-left: 3px solid var(--red); }
-.moc-top  { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
-.moc-name { font-size: 14px; color: #ccc; font-weight: 500; line-height: 1.3; flex: 1; padding-right: 8px; }
-.moc-type-badge { font-size: 8px; font-weight: 700; letter-spacing: 1px; padding: 3px 7px; border-radius: 1px; flex-shrink: 0; }
+/* ─── FOOD LIST — vertical accordion ─── */
+.food-list {
+  display: flex; flex-direction: column;
+  max-height: 0;
+  overflow: hidden;
+  border-top: 0px solid transparent;
+  transition: max-height 0.4s cubic-bezier(0.4,0,0.2,1), border-top 0.25s;
+}
+.food-list--open {
+  max-height: 2000px;   /* large enough for any list */
+  border-top: 1px solid var(--border);
+}
+
+
+.food-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 20px;
+  border-bottom: 1px solid #111;
+  transition: background 0.15s;
+}
+.food-row:last-child { border-bottom: none; }
+.food-row:hover { background: rgba(255,255,255,0.02); }
+.food-row--selected {
+  background: rgba(232,0,13,0.05);
+  border-left: 3px solid var(--red);
+}
+
+/* Left: name + badge */
+.fr-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.fr-name  { font-size: 14px; color: #ccc; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fr-badge { font-size: 8px; font-weight: 700; letter-spacing: 1px; padding: 3px 7px; border-radius: 1px; flex-shrink: 0; }
 .badge-veg    { background: rgba(34,197,94,0.1);  color: var(--veg);    border: 1px solid rgba(34,197,94,0.2); }
 .badge-nonveg { background: rgba(239,68,68,0.1);  color: var(--nonveg); border: 1px solid rgba(239,68,68,0.2); }
 .badge-vegan  { background: rgba(163,230,53,0.1); color: var(--vegan);  border: 1px solid rgba(163,230,53,0.2); }
-.moc-cal      { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--red); line-height: 1; margin-bottom: 4px; }
-.moc-cal-unit { font-size: 9px; color: #333; letter-spacing: 2px; }
-.moc-macros   { display: flex; gap: 12px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #181818; }
-.moc-macro    { font-size: 10px; color: #444; font-family: 'Barlow Condensed', sans-serif; }
-.moc-macro strong { color: #666; }
-.moc-actions  { display: flex; gap: 6px; margin-top: 10px; }
-.moc-recipe-btn { flex: 1; height: 30px; background: transparent; border: 1px solid #1e1e1e; border-radius: 2px; color: #444; font-family: 'Bebas Neue', sans-serif; font-size: 11px; letter-spacing: 2px; cursor: pointer; transition: all 0.2s; }
-.moc-recipe-btn:hover { border-color: rgba(232,0,13,0.3); color: var(--red); }
-.moc-select-btn { flex: 1; height: 30px; background: transparent; border: 1px solid #1e1e1e; border-radius: 2px; color: #444; font-family: 'Bebas Neue', sans-serif; font-size: 11px; letter-spacing: 2px; cursor: pointer; transition: all 0.2s; }
-.moc-select-btn:hover { border-color: rgba(232,0,13,0.3); color: var(--red); }
-.meal-option-card.selected .moc-select-btn { background: var(--red); border-color: var(--red); color: white; }
-.selected-tick { position: absolute; top: 10px; right: 10px; width: 20px; height: 20px; border-radius: 50%; background: var(--red); display: none; align-items: center; justify-content: center; font-size: 10px; color: white; }
-.meal-option-card.selected .selected-tick { display: flex; }
+
+
+/* Center: macros */
+.fr-macros { display: flex; gap: 16px; flex-shrink: 0; }
+.fr-macro  { font-size: 11px; color: #444; font-family: 'Barlow Condensed', sans-serif; }
+.fr-macro strong { color: #666; }
+
+/* Right: cal + buttons */
+.fr-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.fr-cal   { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: var(--red); line-height: 1; min-width: 52px; text-align: right; }
+.fr-unit  { font-size: 9px; color: #444; letter-spacing: 1px; }
+
+.fr-recipe-btn {
+  height: 30px; padding: 0 12px;
+  background: transparent; border: 1px solid #1e1e1e; border-radius: 2px;
+  color: #444; font-family: 'Bebas Neue', sans-serif; font-size: 10px; letter-spacing: 2px;
+  cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+}
+.fr-recipe-btn:hover { border-color: rgba(232,0,13,0.3); color: var(--red); }
+
+.fr-select-btn {
+  height: 30px; padding: 0 14px;
+  background: transparent; border: 1px solid #1e1e1e; border-radius: 2px;
+  color: #444; font-family: 'Bebas Neue', sans-serif; font-size: 10px; letter-spacing: 2px;
+  cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+}
+.fr-select-btn:hover { border-color: rgba(232,0,13,0.3); color: var(--red); }
+.fr-select-btn--active { background: var(--red); border-color: var(--red); color: white; }
+
 .meal-empty-slot { padding: 24px; text-align: center; font-size: 11px; color: #1e1e1e; letter-spacing: 2px; font-weight: 700; }
+
+
 
 /* RECIPE MODAL */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.2s; backdrop-filter: blur(4px); }
@@ -188,3 +244,24 @@ html, body { height: 100%; background: var(--black); font-family: 'Barlow', sans
 .rm-swap-btn:hover { border-color: #333; color: #666; }
 
 @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Responsive Carousel */
+@media (max-width: 1024px) {
+  .meal-option-card { min-width: 280px; max-width: 280px; }
+}
+
+@media (max-width: 768px) {
+  .page-layout { grid-template-columns: 1fr; }
+  .left-panel { position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+  .meal-option-card { min-width: 320px; max-width: 320px; }
+  .carousel-nav { gap: 6px; }
+  .carousel-arrow { width: 28px; height: 28px; font-size: 12px; }
+}
+
+@media (max-width: 480px) {
+  .meal-option-card { min-width: 85vw; max-width: 85vw; }
+  .meal-cards-grid { padding: 0 12px; }
+  .rp-header { flex-direction: column; gap: 16px; align-items: flex-start; }
+  .rp-header-right { width: 100%; }
+  .generate-btn, .reset-btn { flex: 1; }
+}

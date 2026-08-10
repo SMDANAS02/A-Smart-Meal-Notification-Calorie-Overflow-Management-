@@ -236,6 +236,183 @@ const FOOD_DB = {
   'granola':            { cal: 471, p: 10,  c: 64,  f: 20,  unit: '100g' },
   'muesli':             { cal: 360, p: 10,  c: 66,  f: 6,   unit: '100g' },
   'cereal':             { cal: 130, p: 3,   c: 28,  f: 1,   unit: 'cup' },
+
+  // ══════════════════════════════════════
+  // 🍛 MORE INDIAN CURRIES & GRAVIES
+  // ══════════════════════════════════════
+  'kadai chicken':      { cal: 270, p: 23,  c: 10,  f: 16,  unit: 'cup' },
+  'chicken tikka':      { cal: 190, p: 28,  c: 3,   f: 7,   unit: '100g' },
+  'chicken tandoori':   { cal: 220, p: 30,  c: 4,   f: 9,   unit: '100g' },
+  'fish curry':         { cal: 190, p: 22,  c: 8,   f: 8,   unit: 'cup' },
+  'prawn curry':        { cal: 180, p: 20,  c: 9,   f: 7,   unit: 'cup' },
+  'egg curry':          { cal: 200, p: 12,  c: 10,  f: 13,  unit: 'cup' },
+  'bhindi masala':      { cal: 120, p: 3,   c: 15,  f: 5,   unit: 'cup' },
+  'baingan bharta':     { cal: 140, p: 3,   c: 18,  f: 6,   unit: 'cup' },
+  'malai kofta':        { cal: 280, p: 8,   c: 22,  f: 18,  unit: 'cup' },
+  'navratan korma':     { cal: 240, p: 7,   c: 20,  f: 15,  unit: 'cup' },
+  'kadai paneer':       { cal: 290, p: 13,  c: 12,  f: 21,  unit: 'cup' },
+  'shahi paneer':       { cal: 310, p: 13,  c: 15,  f: 23,  unit: 'cup' },
+  'matar paneer':       { cal: 250, p: 12,  c: 14,  f: 17,  unit: 'cup' },
+  'chana masala':       { cal: 160, p: 9,   c: 26,  f: 3,   unit: 'cup' },
+  'baingan masala':     { cal: 130, p: 3,   c: 16,  f: 6,   unit: 'cup' },
+  'vegetable curry':    { cal: 140, p: 4,   c: 18,  f: 6,   unit: 'cup' },
+  'mixed veg':          { cal: 130, p: 4,   c: 17,  f: 5,   unit: 'cup' },
+
+  // ══════════════════════════════════════
+  // 🥘 STREET FOOD & CHAAT
+  // ══════════════════════════════════════
+  'vada pav':           { cal: 286, p: 7,   c: 40,  f: 11,  unit: 'piece' },
+  'pani puri':          { cal: 30,  p: 1,   c: 6,   f: 0.5, unit: 'piece' },
+  'bhel puri':          { cal: 180, p: 5,   c: 30,  f: 5,   unit: 'cup' },
+  'sev puri':           { cal: 200, p: 4,   c: 32,  f: 6,   unit: 'serving' },
+  'dahi puri':          { cal: 170, p: 4,   c: 26,  f: 5,   unit: 'serving' },
+  'ragda pattice':      { cal: 250, p: 7,   c: 35,  f: 9,   unit: 'plate' },
+  'chole bhature':      { cal: 550, p: 14,  c: 70,  f: 23,  unit: 'plate' },
+  'masala puri':        { cal: 200, p: 5,   c: 28,  f: 8,   unit: 'serving' },
+  'aloo tikki':         { cal: 150, p: 3,   c: 22,  f: 6,   unit: 'piece' },
+  'papdi chaat':        { cal: 220, p: 5,   c: 32,  f: 8,   unit: 'serving' },
+  'dahi bhalla':        { cal: 190, p: 6,   c: 28,  f: 6,   unit: 'serving' },
+  'pakora':             { cal: 200, p: 4,   c: 22,  f: 10,  unit: '100g' },
+  'paneer pakora':      { cal: 220, p: 8,   c: 18,  f: 13,  unit: '100g' },
+  'bread pakora':       { cal: 180, p: 5,   c: 24,  f: 7,   unit: 'piece' },
+  'cutlet':             { cal: 170, p: 5,   c: 23,  f: 6,   unit: 'piece' },
+
+  // ══════════════════════════════════════
+  // 🍚 MORE RICE VARIETIES
+  // ══════════════════════════════════════
+  'jeera rice':         { cal: 180, p: 3.5, c: 32,  f: 4,   unit: 'cup' },
+  'ghee rice':          { cal: 220, p: 4,   c: 35,  f: 8,   unit: 'cup' },
+  'kashmiri pulao':     { cal: 240, p: 5,   c: 38,  f: 7,   unit: 'cup' },
+  'vegetable pulao':    { cal: 200, p: 5,   c: 35,  f: 5,   unit: 'cup' },
+  'mutton biryani':     { cal: 340, p: 20,  c: 38,  f: 12,  unit: 'cup' },
+  'hyderabadi biryani': { cal: 330, p: 19,  c: 39,  f: 11,  unit: 'cup' },
+  'dum biryani':        { cal: 320, p: 18,  c: 38,  f: 10,  unit: 'cup' },
+  'paneer biryani':     { cal: 280, p: 10,  c: 40,  f: 9,   unit: 'cup' },
+  'egg biryani':        { cal: 290, p: 13,  c: 37,  f: 9,   unit: 'cup' },
+  'prawn biryani':      { cal: 300, p: 17,  c: 38,  f: 9,   unit: 'cup' },
+
+  // ══════════════════════════════════════
+  // 🥤 HEALTHY DRINKS & SMOOTHIES
+  // ══════════════════════════════════════
+  'green smoothie':     { cal: 120, p: 3,   c: 23,  f: 2,   unit: 'glass' },
+  'banana smoothie':    { cal: 180, p: 5,   c: 32,  f: 3,   unit: 'glass' },
+  'berry smoothie':     { cal: 150, p: 4,   c: 28,  f: 2,   unit: 'glass' },
+  'mango smoothie':     { cal: 200, p: 4,   c: 38,  f: 3,   unit: 'glass' },
+  'almond milk':        { cal: 30,  p: 1,   c: 1,   f: 2.5, unit: '100ml' },
+  'soy milk':           { cal: 54,  p: 3.3, c: 6,   f: 1.8, unit: '100ml' },
+  'oat milk':           { cal: 47,  p: 1,   c: 8,   f: 1.5, unit: '100ml' },
+  'green tea':          { cal: 2,   p: 0,   c: 0,   f: 0,   unit: 'cup' },
+  'black tea':          { cal: 2,   p: 0,   c: 0.5, f: 0,   unit: 'cup' },
+  'lemon water':        { cal: 6,   p: 0,   c: 2,   f: 0,   unit: 'glass' },
+  'buttermilk':         { cal: 40,  p: 3,   c: 5,   f: 1,   unit: '200ml' },
+  'jaljeera':           { cal: 45,  p: 1,   c: 10,  f: 0,   unit: 'glass' },
+  'aam panna':          { cal: 90,  p: 0.5, c: 22,  f: 0.2, unit: 'glass' },
+  'nimbu pani':         { cal: 50,  p: 0,   c: 13,  f: 0,   unit: 'glass' },
+  'masala chai':        { cal: 60,  p: 2,   c: 8,   f: 2,   unit: 'cup' },
+
+  // ══════════════════════════════════════
+  // 🥗 SALADS & HEALTHY BOWLS
+  // ══════════════════════════════════════
+  'greek salad':        { cal: 150, p: 5,   c: 10,  f: 10,  unit: 'bowl' },
+  'quinoa salad':       { cal: 180, p: 6,   c: 25,  f: 6,   unit: 'bowl' },
+  'kale salad':         { cal: 120, p: 4,   c: 15,  f: 5,   unit: 'bowl' },
+  'chickpea salad':     { cal: 160, p: 7,   c: 22,  f: 5,   unit: 'bowl' },
+  'fruit salad':        { cal: 100, p: 1,   c: 24,  f: 0.5, unit: 'bowl' },
+  'pasta salad':        { cal: 200, p: 6,   c: 30,  f: 6,   unit: 'bowl' },
+  'tuna salad':         { cal: 180, p: 18,  c: 8,   f: 8,   unit: 'bowl' },
+  'chicken salad':      { cal: 190, p: 20,  c: 10,  f: 8,   unit: 'bowl' },
+  'buddha bowl':        { cal: 350, p: 12,  c: 48,  f: 12,  unit: 'bowl' },
+  'poke bowl':          { cal: 380, p: 25,  c: 42,  f: 12,  unit: 'bowl' },
+  'acai bowl':          { cal: 280, p: 5,   c: 48,  f: 8,   unit: 'bowl' },
+  'grain bowl':         { cal: 320, p: 10,  c: 45,  f: 10,  unit: 'bowl' },
+
+  // ══════════════════════════════════════
+  // 🍞 BREADS & BAKERY
+  // ══════════════════════════════════════
+  'kulcha':             { cal: 180, p: 5,   c: 32,  f: 4,   unit: 'piece' },
+  'garlic naan':        { cal: 290, p: 9,   c: 48,  f: 7,   unit: 'piece' },
+  'butter naan':        { cal: 310, p: 9,   c: 48,  f: 9,   unit: 'piece' },
+  'cheese naan':        { cal: 340, p: 13,  c: 50,  f: 10,  unit: 'piece' },
+  'tandoori roti':      { cal: 80,  p: 3,   c: 15,  f: 1,   unit: 'piece' },
+  'missi roti':         { cal: 100, p: 4,   c: 18,  f: 2,   unit: 'piece' },
+  'bhakri':             { cal: 90,  p: 3,   c: 17,  f: 1,   unit: 'piece' },
+  'thepla':             { cal: 110, p: 3,   c: 18,  f: 3,   unit: 'piece' },
+  'methi paratha':      { cal: 200, p: 5,   c: 28,  f: 8,   unit: 'piece' },
+  'gobi paratha':       { cal: 210, p: 5,   c: 30,  f: 8,   unit: 'piece' },
+  'paneer paratha':     { cal: 240, p: 8,   c: 32,  f: 9,   unit: 'piece' },
+  'mooli paratha':      { cal: 190, p: 4,   c: 27,  f: 7,   unit: 'piece' },
+  'laccha paratha':     { cal: 220, p: 5,   c: 32,  f: 8,   unit: 'piece' },
+  'pita bread':         { cal: 165, p: 5,   c: 33,  f: 1,   unit: 'piece' },
+  'focaccia':           { cal: 210, p: 6,   c: 36,  f: 5,   unit: '100g' },
+  'sourdough':          { cal: 120, p: 5,   c: 24,  f: 0.5, unit: 'slice' },
+  'multigrain bread':   { cal: 85,  p: 4,   c: 14,  f: 1.5, unit: 'slice' },
+
+  // ══════════════════════════════════════
+  // 🍖 MORE PROTEINS & MEAT
+  // ══════════════════════════════════════
+  'lamb':               { cal: 294, p: 25,  c: 0,   f: 21,  unit: '100g' },
+  'turkey':             { cal: 135, p: 25,  c: 0,   f: 3,   unit: '100g' },
+  'duck':               { cal: 337, p: 19,  c: 0,   f: 28,  unit: '100g' },
+  'pork':               { cal: 242, p: 27,  c: 0,   f: 14,  unit: '100g' },
+  'bacon':              { cal: 541, p: 37,  c: 1,   f: 42,  unit: '100g' },
+  'sausage':            { cal: 300, p: 13,  c: 3,   f: 27,  unit: '100g' },
+  'ham':                { cal: 145, p: 21,  c: 1,   f: 6,   unit: '100g' },
+  'crab':               { cal: 97,  p: 19,  c: 0,   f: 1,   unit: '100g' },
+  'lobster':            { cal: 89,  p: 19,  c: 1,   f: 1,   unit: '100g' },
+  'squid':              { cal: 92,  p: 16,  c: 3,   f: 1,   unit: '100g' },
+  'octopus':            { cal: 82,  p: 15,  c: 2,   f: 1,   unit: '100g' },
+  'mackerel':           { cal: 205, p: 19,  c: 0,   f: 14,  unit: '100g' },
+  'sardine':            { cal: 208, p: 25,  c: 0,   f: 11,  unit: '100g' },
+  'tilapia':            { cal: 128, p: 26,  c: 0,   f: 3,   unit: '100g' },
+  'cod':                { cal: 82,  p: 18,  c: 0,   f: 1,   unit: '100g' },
+  'hilsa':              { cal: 310, p: 22,  c: 0,   f: 25,  unit: '100g' },
+  'pomfret':            { cal: 96,  p: 18,  c: 0,   f: 2,   unit: '100g' },
+  'rohu':               { cal: 97,  p: 17,  c: 0,   f: 2,   unit: '100g' },
+  'katla':              { cal: 150, p: 18,  c: 0,   f: 8,   unit: '100g' },
+
+  // ══════════════════════════════════════
+  // 🧈 CONDIMENTS & SPICES
+  // ══════════════════════════════════════
+  'mayonnaise':         { cal: 94,  p: 0.1, c: 0.1, f: 10,  unit: 'tbsp' },
+  'ketchup':            { cal: 17,  p: 0.2, c: 4,   f: 0,   unit: 'tbsp' },
+  'mustard':            { cal: 10,  p: 0.7, c: 1,   f: 0.6, unit: 'tbsp' },
+  'soy sauce':          { cal: 8,   p: 1,   c: 1,   f: 0,   unit: 'tbsp' },
+  'hot sauce':          { cal: 1,   p: 0,   c: 0,   f: 0,   unit: 'tsp' },
+  'olive oil':          { cal: 119, p: 0,   c: 0,   f: 14,  unit: 'tbsp' },
+  'coconut oil':        { cal: 121, p: 0,   c: 0,   f: 14,  unit: 'tbsp' },
+  'vegetable oil':      { cal: 120, p: 0,   c: 0,   f: 14,  unit: 'tbsp' },
+  'pickle':             { cal: 25,  p: 0.5, c: 4,   f: 1,   unit: 'tbsp' },
+  'achaar':             { cal: 25,  p: 0.5, c: 4,   f: 1,   unit: 'tbsp' },
+
+  // ══════════════════════════════════════
+  // 🍰 MORE DESSERTS & SWEETS
+  // ══════════════════════════════════════
+  'rasgulla':           { cal: 150, p: 3,   c: 30,  f: 2,   unit: 'piece' },
+  'sandesh':            { cal: 140, p: 4,   c: 25,  f: 3,   unit: 'piece' },
+  'rasmalai':           { cal: 180, p: 5,   c: 28,  f: 6,   unit: 'piece' },
+  'kaju katli':         { cal: 160, p: 3,   c: 22,  f: 7,   unit: 'piece' },
+  'barfi':              { cal: 150, p: 3,   c: 23,  f: 6,   unit: 'piece' },
+  'mysore pak':         { cal: 180, p: 3,   c: 25,  f: 8,   unit: 'piece' },
+  'peda':               { cal: 140, p: 3,   c: 22,  f: 5,   unit: 'piece' },
+  'jalebi':             { cal: 150, p: 1,   c: 30,  f: 4,   unit: '30g' },
+  'imarti':             { cal: 160, p: 1,   c: 32,  f: 4,   unit: '30g' },
+  'ghewar':             { cal: 200, p: 3,   c: 32,  f: 7,   unit: '50g' },
+  'boondi ladoo':       { cal: 170, p: 3,   c: 26,  f: 7,   unit: 'piece' },
+  'motichoor ladoo':    { cal: 180, p: 3,   c: 28,  f: 7,   unit: 'piece' },
+  'besan ladoo':        { cal: 190, p: 4,   c: 26,  f: 8,   unit: 'piece' },
+  'rava ladoo':         { cal: 170, p: 3,   c: 25,  f: 7,   unit: 'piece' },
+  'coconut ladoo':      { cal: 160, p: 2,   c: 24,  f: 7,   unit: 'piece' },
+  'kheer':              { cal: 165, p: 5,   c: 28,  f: 4,   unit: 'cup' },
+  'shrikhand':          { cal: 190, p: 6,   c: 30,  f: 5,   unit: 'cup' },
+  'kulfi':              { cal: 180, p: 4,   c: 26,  f: 7,   unit: 'piece' },
+  'falooda':            { cal: 250, p: 6,   c: 42,  f: 7,   unit: 'glass' },
+  'brownie':            { cal: 240, p: 3,   c: 30,  f: 12,  unit: 'piece' },
+  'donut':              { cal: 250, p: 4,   c: 30,  f: 12,  unit: 'piece' },
+  'muffin':             { cal: 220, p: 4,   c: 32,  f: 9,   unit: 'piece' },
+  'cupcake':            { cal: 240, p: 3,   c: 35,  f: 10,  unit: 'piece' },
+  'pudding':            { cal: 150, p: 4,   c: 26,  f: 4,   unit: 'cup' },
+  'tiramisu':           { cal: 290, p: 6,   c: 28,  f: 17,  unit: 'slice' },
+  'cheesecake':         { cal: 320, p: 6,   c: 26,  f: 22,  unit: 'slice' },
 };
 
 module.exports = FOOD_DB;
