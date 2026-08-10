@@ -68,7 +68,7 @@ router.post('/', auth, async (req, res) => {
       : 'No meals logged today yet.';
 
     // Construct System Context for Grok / Groq
-    const systemPrompt = `You are fitAi Calorie & Gym Assistant, an intelligent, energetic fitness & nutrition AI assistant inside the fitAi Calorie Overflow & Diet Management app.
+    const systemPrompt = `You are fitAi Calorie & Nutrition Assistant, an intelligent, energetic fitness & nutrition AI assistant inside the fitAi Calorie Overflow & Diet Management app.
 
 REAL-TIME USER METRICS TODAY (${dateStr}):
 - User Name: ${user?.name || 'User'}
@@ -81,40 +81,36 @@ REAL-TIME USER METRICS TODAY (${dateStr}):
 - Logged Meals Today:
 ${mealsSummary}
 
-SPECIAL ACTION CAPABILITY:
-If the user requests to ADD, LOG, or RECORD a food item (e.g. "Add 2 eggs to breakfast", "I had a sandwich 350 cal", "Log 1 apple for lunch"), you MUST append an ACTION JSON object at the VERY END of your message using this exact format:
-
-\`\`\`json
-{
-  "action": "LOG_FOOD",
-  "meal_name": "breakfast|lunch|dinner|snack",
-  "food_name": "Food Name",
-  "calories": 200,
-  "protein": 10,
-  "carbs": 25,
-  "fat": 5,
-  "quantity": 1,
-  "unit": "serving"
-}
-\`\`\`
-
-If meal time is not specified, infer the logical meal time based on current time (morning=breakfast, noon=lunch, evening=dinner, night=snack). If calories/macros are not specified by user, estimate accurate standard nutritional values for the food.
-
-Be helpful, concise, friendly, and always answer questions about their previous food logs accurately based on the REAL-TIME USER METRICS provided above.`;
+SPECIAL INSTRUCTIONS:
+- Answer user queries about calories, foods, and nutrition warmly and concisely.
+- If user asks to log/add a food item (e.g. "add 2 eggs", "I ate an apple"), confirm it naturally.
+- IMPORTANT: Do NOT include raw JSON blocks, code fences, or technical data structures in your text response. Keep responses clean, natural, and user-friendly.`;
 
     let replyText = "";
     let actionResult = null;
+
+    // Helper to thoroughly clean any JSON/code blocks from text
+    const cleanTextOfCodeBlocks = (str) => {
+      if (!str) return '';
+      return String(str)
+        .replace(/```[\s\S]*?```/gi, '')
+        .replace(/\{[\s\S]*?"action"[\s\S]*?\}/gi, '')
+        .replace(/\{[\s\S]*?"calories"[\s\S]*?\}/gi, '')
+        .replace(/```/g, '')
+        .trim();
+    };
 
     if (apiKey) {
       // Sanitize history to prevent API 400 errors
       const validRoles = new Set(['user', 'assistant']);
       const sanitizedHistory = (Array.isArray(history) ? history : [])
-        .filter(h => h && validRoles.has(h.role) && typeof h.content === 'string' && h.content.trim().length > 0)
-        .slice(-8)
+        .filter(h => h && validRoles.has(h.role) && typeof h.content === 'string')
         .map(h => ({
           role: h.role,
-          content: String(h.content).replace(/```json[\s\S]*?```/gi, '').trim()
-        }));
+          content: cleanTextOfCodeBlocks(h.content)
+        }))
+        .filter(h => h.content.length > 0)
+        .slice(-6);
 
       const messages = [
         { role: "system", content: systemPrompt },
@@ -126,37 +122,30 @@ Be helpful, concise, friendly, and always answer questions about their previous 
         replyText = await callGrokAPI(apiKey, messages);
       } catch (err) {
         console.error("Grok API call failed:", err);
-        replyText = `⚠️ Grok API call error: ${err.message}. Switching to local AI engine.`;
+        replyText = `⚠️ API error: ${err.message}. Switching to local assistant.`;
       }
     }
 
     // Fallback/Local AI response if API key wasn't provided or failed
-    if (!replyText) {
-      replyText = generateFallbackResponse(message, user, targetCal, totalCal, remainingCal, mealsSummary, waterGlasses);
+    if (!replyText || replyText.includes("API error:")) {
+      const fallbackMsg = generateFallbackResponse(message, user, targetCal, totalCal, remainingCal, mealsSummary, waterGlasses);
+      if (!replyText) replyText = fallbackMsg;
     }
 
-    // Robust JSON Action Extraction (handles markdown fences, plain JSON, and fallback intent)
-    let extractedAction = null;
-    const jsonMatch = replyText.match(/(\{[\s\S]*?"action"\s*:\s*"LOG_FOOD"[\s\S]*?\})/);
+    // Extract food logging intent from user message & replyText
+    let extractedAction = detectFoodLogIntent(message);
 
+    // Also check if replyText has any JSON intent
+    const jsonMatch = replyText.match(/(\{[\s\S]*?"action"\s*:\s*"LOG_FOOD"[\s\S]*?\})/);
     if (jsonMatch) {
       try {
-        extractedAction = JSON.parse(jsonMatch[1]);
-      } catch (e) {
-        console.error("Failed to parse AI action JSON:", e);
-      }
-    }
-
-    if (!extractedAction) {
-      extractedAction = detectFoodLogIntent(message);
+        const parsed = JSON.parse(jsonMatch[1]);
+        if (parsed && parsed.action === 'LOG_FOOD') extractedAction = parsed;
+      } catch (e) {}
     }
 
     // Clean user-facing text: strip raw JSON action blocks completely
-    replyText = replyText
-      .replace(/```json\s*\{[\s\S]*?\}\s*```/gi, '')
-      .replace(/```\s*\{[\s\S]*?\}\s*```/gi, '')
-      .replace(/\{[\s\S]*?"action"\s*:\s*"LOG_FOOD"[\s\S]*?\}/gi, '')
-      .trim();
+    replyText = cleanTextOfCodeBlocks(replyText);
 
     // If an action was extracted, execute DB logging safely
     if (extractedAction && extractedAction.action === 'LOG_FOOD') {
