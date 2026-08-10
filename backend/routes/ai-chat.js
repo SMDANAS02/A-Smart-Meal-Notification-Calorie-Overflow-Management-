@@ -106,10 +106,19 @@ Be helpful, concise, friendly, and always answer questions about their previous 
     let actionResult = null;
 
     if (apiKey) {
-      // Call Grok API
+      // Sanitize history to prevent API 400 errors
+      const validRoles = new Set(['user', 'assistant']);
+      const sanitizedHistory = (Array.isArray(history) ? history : [])
+        .filter(h => h && validRoles.has(h.role) && typeof h.content === 'string' && h.content.trim().length > 0)
+        .slice(-8)
+        .map(h => ({
+          role: h.role,
+          content: String(h.content).replace(/```json[\s\S]*?```/gi, '').trim()
+        }));
+
       const messages = [
         { role: "system", content: systemPrompt },
-        ...history.slice(-8), // Keep recent conversation context
+        ...sanitizedHistory,
         { role: "user", content: message }
       ];
 
@@ -126,49 +135,59 @@ Be helpful, concise, friendly, and always answer questions about their previous 
       replyText = generateFallbackResponse(message, user, targetCal, totalCal, remainingCal, mealsSummary, waterGlasses);
     }
 
-    // Check if there is an ACTION JSON block in replyText
-    const actionMatch = replyText.match(/```json\s*(\{[\s\S]*?"action":\s*"LOG_FOOD"[\s\S]*?\})\s*```/);
+    // Robust JSON Action Extraction (handles markdown fences, plain JSON, and fallback intent)
     let extractedAction = null;
+    const jsonMatch = replyText.match(/(\{[\s\S]*?"action"\s*:\s*"LOG_FOOD"[\s\S]*?\})/);
 
-    if (actionMatch) {
+    if (jsonMatch) {
       try {
-        extractedAction = JSON.parse(actionMatch[1]);
+        extractedAction = JSON.parse(jsonMatch[1]);
       } catch (e) {
         console.error("Failed to parse AI action JSON:", e);
       }
-    } else {
-      // Also check fallback simple intent detection
+    }
+
+    if (!extractedAction) {
       extractedAction = detectFoodLogIntent(message);
     }
 
-    // If an action was extracted, execute DB logging directly
+    // Clean user-facing text: strip raw JSON action blocks completely
+    replyText = replyText
+      .replace(/```json\s*\{[\s\S]*?\}\s*```/gi, '')
+      .replace(/```\s*\{[\s\S]*?\}\s*```/gi, '')
+      .replace(/\{[\s\S]*?"action"\s*:\s*"LOG_FOOD"[\s\S]*?\}/gi, '')
+      .trim();
+
+    // If an action was extracted, execute DB logging safely
     if (extractedAction && extractedAction.action === 'LOG_FOOD') {
-      const mealName = (extractedAction.meal_name || 'snack').toLowerCase();
-      const foodName = extractedAction.food_name || 'Food';
-      const cals = parseInt(extractedAction.calories) || 100;
-      const p = parseInt(extractedAction.protein) || 0;
-      const c = parseInt(extractedAction.carbs) || 0;
-      const f = parseInt(extractedAction.fat) || 0;
-      const qty = extractedAction.quantity || 1;
-      const unit = extractedAction.unit || 'serving';
+      try {
+        const mealName = String(extractedAction.meal_name || 'snack').toLowerCase().trim();
+        const foodName = String(extractedAction.food_name || 'Food').trim();
+        const cals = Math.max(0, parseInt(extractedAction.calories) || 100);
+        const p = Math.max(0, parseInt(extractedAction.protein) || 0);
+        const c = Math.max(0, parseInt(extractedAction.carbs) || 0);
+        const f = Math.max(0, parseInt(extractedAction.fat) || 0);
+        const qty = Math.max(1, parseInt(extractedAction.quantity) || 1);
+        const unit = String(extractedAction.unit || 'serving').slice(0, 20);
 
-      const insertResult = db.prepare(`
-        INSERT INTO meals (user_id, date, meal_name, food_name, calories, protein, carbs, fat, quantity, unit)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(userId, dateStr, mealName, foodName, cals, p, c, f, qty, unit);
+        const insertResult = db.prepare(`
+          INSERT INTO meals (user_id, date, meal_name, food_name, calories, protein, carbs, fat, quantity, unit)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(userId, dateStr, mealName, foodName, cals, p, c, f, qty, unit);
 
-      const newMeal = db.prepare('SELECT * FROM meals WHERE id = ?').get(insertResult.lastInsertRowid);
+        const newMeal = db.prepare('SELECT * FROM meals WHERE id = ?').get(insertResult.lastInsertRowid);
 
-      actionResult = {
-        success: true,
-        meal: newMeal,
-        message: `Successfully logged ${foodName} (${cals} kcal) under ${mealName.toUpperCase()}!`
-      };
+        actionResult = {
+          success: true,
+          meal: newMeal,
+          message: `Successfully logged ${foodName} (${cals} kcal) under ${mealName.toUpperCase()}!`
+        };
+      } catch (dbErr) {
+        console.error("Database error while logging AI food action:", dbErr);
+      }
 
-      // Clean up the JSON code block from user-facing text if needed
-      replyText = replyText.replace(/```json\s*\{[\s\S]*?\}\s*```/g, '').trim();
       if (!replyText) {
-        replyText = `✅ Added **${foodName}** (${cals} kcal) to your **${mealName.toUpperCase()}**! Total calories consumed today is now **${totalCal + cals} / ${targetCal} kcal**.`;
+        replyText = `✅ Added **${extractedAction.food_name || 'food'}** to your daily tracker!`;
       }
     }
 

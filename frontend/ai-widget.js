@@ -317,7 +317,14 @@
 
   function formatMarkdown(str) {
     if (!str) return '';
-    let text = escapeHtml(str);
+    // Strip any raw JSON action blocks
+    let cleanStr = String(str)
+      .replace(/```json[\s\S]*?```/gi, '')
+      .replace(/```[\s\S]*?```/gi, '')
+      .replace(/\{[\s\S]*?"action"\s*:\s*"LOG_FOOD"[\s\S]*?\}/gi, '')
+      .trim();
+
+    let text = escapeHtml(cleanStr);
     text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
     text = text.replace(/\n/g, '<br/>');
