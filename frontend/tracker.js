@@ -89,38 +89,8 @@ const STATE = {
 // ─────────────────────────────────────────
 // BACKEND SYNC FUNCTIONS
 // ─────────────────────────────────────────
-async function saveMealsToBackend() {
-  if (!STATE.meals || STATE.meals.length === 0) return;
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-  try {
-    const meals = STATE.meals.flatMap(meal =>
-      meal.foods.map(food => ({
-        date: today,
-        meal_name: meal.name,
-        food_name: food.name,
-        calories: food.cal || 0,
-        protein: food.protein || 0,
-        carbs: food.carbs || 0,
-        fat: food.fat || 0,
-        quantity: food.qty || 1,
-        unit: 'serving'
-      }))
-    );
+// Single food additions/deletions are handled per user action.
 
-    for (const meal of meals) {
-      await fetch(`${API_BASE}/meals`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(meal)
-      });
-    }
-  } catch (err) {
-    console.error('Save meals to backend failed:', err);
-  }
-}
 
 async function saveWaterToBackend() {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
@@ -307,8 +277,8 @@ window.addEventListener('DOMContentLoaded', () => {
   setDate();
   checkOnLoadDebt();
   loadBackendData();
-  // Auto refresh every 30 seconds
-  setInterval(loadBackendData, 30000);
+  // Auto refresh every 5 minutes (reduced from 30 seconds to prevent duplication)
+  setInterval(loadBackendData, 300000);
 });
 
 async function loadBackendData() {
@@ -351,9 +321,11 @@ async function loadBackendData() {
     // 3. Meals load from backend
     const mRes  = await fetch(`${API_BASE}/meals?date=${today}`, { headers: { 'Authorization': `Bearer ${token}` } });
     const mData = await mRes.json();
+    
+    // Always clear existing foods first to prevent duplication
+    STATE.meals.forEach(m => m.foods = []);
+    
     if (mData.meals && mData.meals.length > 0) {
-      // Clear existing foods ONLY when loading backend data
-      STATE.meals.forEach(m => m.foods = []);
       // Add foods from backend
       mData.meals.forEach(m => {
         const meal = STATE.meals.find(sm => sm.name === m.meal_name) || STATE.meals[0];
@@ -585,22 +557,57 @@ function calculateWithAI() {
   }, 500);
 }
 
-function logFood() {
+async function logFood() {
   if (!aiNutritionData) return;
   const name = document.getElementById('foodName').value.trim();
   const qty  = document.getElementById('foodQty').value.trim() || '1 serving';
-  STATE.meals[activeMealIndex].foods.push({
-    name: `${name} (${qty})`, cal: aiNutritionData.calories, qty: 1,
+  const foodName = `${name} (${qty})`;
+  const mealObj = STATE.meals[activeMealIndex];
+  const newFood = {
+    name: foodName, cal: aiNutritionData.calories, qty: 1,
     protein: aiNutritionData.protein, carbs: aiNutritionData.carbs, fat: aiNutritionData.fat,
-  });
+  };
+  mealObj.foods.push(newFood);
   localStorage.setItem('fitai_meals', JSON.stringify(STATE.meals));
-  closeModal(); renderMeals(); updateAllStats(); checkAndBalanceCalories(); aiNutritionData = null;saveMealsToBackend();
+  closeModal(); renderMeals(); updateAllStats(); checkAndBalanceCalories(); aiNutritionData = null;
+
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  try {
+    const res = await fetch(`${API_BASE}/meals`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        date: today, meal_name: mealObj.name, food_name: foodName,
+        calories: newFood.cal, protein: newFood.protein, carbs: newFood.carbs, fat: newFood.fat,
+        quantity: 1, unit: 'serving'
+      })
+    });
+    const data = await res.json();
+    if (data.meal && data.meal.id) {
+      newFood.id = data.meal.id;
+      localStorage.setItem('fitai_meals', JSON.stringify(STATE.meals));
+    }
+  } catch (err) {
+    console.error('Failed to post meal to backend:', err);
+  }
 }
 
-function deleteFood(mealIdx, foodIdx) {
+async function deleteFood(mealIdx, foodIdx) {
+  const food = STATE.meals[mealIdx].foods[foodIdx];
   STATE.meals[mealIdx].foods.splice(foodIdx, 1);
   localStorage.setItem('fitai_meals', JSON.stringify(STATE.meals));
-  renderMeals(); updateAllStats(); checkAndBalanceCalories();saveMealsToBackend();
+  renderMeals(); updateAllStats(); checkAndBalanceCalories();
+
+  if (food && food.id) {
+    try {
+      await fetch(`${API_BASE}/meals/${food.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (err) {
+      console.error('Failed to delete meal from backend:', err);
+    }
+  }
 }
 
 function updateAllStats() {
@@ -652,12 +659,33 @@ function updateRecommendations(remaining) {
     </div>`).join('');
 }
 
-function quickAddRec(name, cal, protein, carbs, fat) {
+async function quickAddRec(name, cal, protein, carbs, fat) {
   let bestIdx = 0, bestRem = -Infinity;
   STATE.meals.forEach((m, i) => { const eaten = m.foods.reduce((s,f) => s + (f.cal*f.qty), 0); if (m.target - eaten > bestRem) { bestRem = m.target - eaten; bestIdx = i; } });
-  STATE.meals[bestIdx].foods.push({ name, cal, qty: 1, protein, carbs, fat });
+  const mealObj = STATE.meals[bestIdx];
+  const newFood = { name, cal, qty: 1, protein, carbs, fat };
+  mealObj.foods.push(newFood);
   localStorage.setItem('fitai_meals', JSON.stringify(STATE.meals));
-  renderMeals(); updateAllStats(); checkAndBalanceCalories();saveMealsToBackend();
+  renderMeals(); updateAllStats(); checkAndBalanceCalories();
+
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  try {
+    const res = await fetch(`${API_BASE}/meals`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        date: today, meal_name: mealObj.name, food_name: name,
+        calories: cal, protein, carbs, fat, quantity: 1, unit: 'serving'
+      })
+    });
+    const data = await res.json();
+    if (data.meal && data.meal.id) {
+      newFood.id = data.meal.id;
+      localStorage.setItem('fitai_meals', JSON.stringify(STATE.meals));
+    }
+  } catch (err) {
+    console.error('Failed to quick-add meal:', err);
+  }
 }
 
 document.addEventListener('keydown', e => {
@@ -817,7 +845,7 @@ function populateMealSelect() {
   STATE.meals.forEach((meal,idx) => { const opt=document.createElement('option'); opt.value=idx; opt.textContent=meal.name+' ('+meal.time+')'; sel.appendChild(opt); });
 }
 
-function addToTracker() {
+async function addToTracker() {
   const name    = document.getElementById('txFoodName').value.trim() || 'Scanned Food';
   const cal     = parseFloat(document.getElementById('txCalories').value) || 0;
   const protein = parseFloat(document.getElementById('txProtein').value)  || 0;
@@ -825,16 +853,37 @@ function addToTracker() {
   const fat     = parseFloat(document.getElementById('txFat').value)      || 0;
   const mealIdx = parseInt(document.getElementById('txMealSelect').value) || 0;
   if (!STATE.meals || !STATE.meals[mealIdx]) return;
-  STATE.meals[mealIdx].foods.push({ name, cal, qty:1, protein, carbs, fat });
+  const mealObj = STATE.meals[mealIdx];
+  const newFood = { name, cal, qty:1, protein, carbs, fat };
+  mealObj.foods.push(newFood);
   localStorage.setItem('fitai_meals', JSON.stringify(STATE.meals));
   const historyItem = { id:Date.now(), name, cal, protein, carbs, fat, image:txSelectedImage,
     time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),
     date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'}),
-    meal:STATE.meals[mealIdx].name };
+    meal:mealObj.name };
   txScanHistory.unshift(historyItem);
   if (txScanHistory.length>20) txScanHistory.pop();
   localStorage.setItem('fitai_scanhistory', JSON.stringify(txScanHistory));
-  renderMeals(); updateAllStats(); checkAndBalanceCalories(); closeTextract(); resetScan();saveMealsToBackend();
+  renderMeals(); updateAllStats(); checkAndBalanceCalories(); closeTextract(); resetScan();
+
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  try {
+    const res = await fetch(`${API_BASE}/meals`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        date: today, meal_name: mealObj.name, food_name: name,
+        calories: cal, protein, carbs, fat, quantity: 1, unit: 'serving'
+      })
+    });
+    const data = await res.json();
+    if (data.meal && data.meal.id) {
+      newFood.id = data.meal.id;
+      localStorage.setItem('fitai_meals', JSON.stringify(STATE.meals));
+    }
+  } catch (err) {
+    console.error('Failed to post scanned food to backend:', err);
+  }
 }
 
 function resetScan() {
