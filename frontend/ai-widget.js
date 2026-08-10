@@ -220,7 +220,11 @@
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        addBotMessage(`⚠️ Error: ${errData.error || 'Server request failed'}`);
+        if (response.status === 401) {
+          addBotMessage(`🔑 Please **[login to your account](login.html)** to log foods and view your daily calorie progress!`);
+        } else {
+          addBotMessage(`⚠️ Notice: ${errData.error || 'Server request failed'}`);
+        }
         return;
       }
 

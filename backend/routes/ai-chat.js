@@ -128,8 +128,7 @@ SPECIAL INSTRUCTIONS:
 
     // Fallback/Local AI response if API key wasn't provided or failed
     if (!replyText || replyText.includes("API error:")) {
-      const fallbackMsg = generateFallbackResponse(message, user, targetCal, totalCal, remainingCal, mealsSummary, waterGlasses);
-      if (!replyText) replyText = fallbackMsg;
+      replyText = generateFallbackResponse(message, user, targetCal, totalCal, remainingCal, mealsSummary, waterGlasses);
     }
 
     // Extract food logging intent from user message & replyText
