@@ -42,6 +42,8 @@ app.use("/api/progress", require("./routes/progress"));
 app.use("/api/diet", require("./routes/diet"));
 app.use("/api/water", require("./routes/water"));
 app.use("/api/notify", require("./routes/notify"));
+app.use("/api/foods", require("./routes/foods"));
+app.use("/api/ai-chat", require("./routes/ai-chat"));
 
 // Twilio webhook requires urlencoded
 app.use("/api/whatsapp", express.urlencoded({ extended: false }), whatsappRoutes);

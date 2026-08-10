@@ -3,16 +3,14 @@ const Database = require("better-sqlite3");
 const path = require("path");
 const fs = require("fs");
 
-// Decide database path
-const DB_PATH =
-  process.env.NODE_ENV === "production"
-    ? "/data/fitai.db"
-    : path.join(__dirname, "fitai.db");
+// Decide database path dynamically for cloud deployment & local
+let DB_PATH = process.env.DB_PATH;
 
-// Ensure /data directory exists in production
-if (process.env.NODE_ENV === "production") {
-  if (!fs.existsSync("/data")) {
-    fs.mkdirSync("/data", { recursive: true });
+if (!DB_PATH) {
+  if (process.env.NODE_ENV === "production" && fs.existsSync("/data")) {
+    DB_PATH = "/data/fitai.db";
+  } else {
+    DB_PATH = path.join(__dirname, "fitai.db");
   }
 }
 
