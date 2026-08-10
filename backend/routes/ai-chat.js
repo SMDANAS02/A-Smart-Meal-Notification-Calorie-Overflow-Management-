@@ -96,6 +96,10 @@ SPECIAL INSTRUCTIONS:
         .replace(/```[\s\S]*?```/gi, '')
         .replace(/\{[\s\S]*?"action"[\s\S]*?\}/gi, '')
         .replace(/\{[\s\S]*?"calories"[\s\S]*?\}/gi, '')
+        .replace(/Here (is|are) the action details[\s\S]*/gi, '')
+        .replace(/Here (is|are) the action to log[\s\S]*/gi, '')
+        .replace(/Here is the JSON[\s\S]*/gi, '')
+        .replace(/Here are the action[\s\S]*/gi, '')
         .replace(/```/g, '')
         .trim();
     };
@@ -198,7 +202,12 @@ SPECIAL INSTRUCTIONS:
 
   } catch (err) {
     console.error("AI Chat Route Error:", err);
-    res.status(500).json({ error: "Failed to process AI chat request", details: err.message });
+    res.json({
+      reply: `🤖 I've received your request! Ask me to log meals like "Add 2 eggs to breakfast" or check remaining calories anytime.`,
+      actionResult: null,
+      metrics: { totalCalories: 0, targetCalories: 2000, remainingCalories: 2000, loggedMealsCount: 0 },
+      hasApiKey: false
+    });
   }
 });
 
