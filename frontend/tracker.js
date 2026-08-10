@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = window.location.origin.includes('5500') ? 'http://localhost:3000/api' : '/api';
 const token = localStorage.getItem('fitai_token');
 if (!token) window.location.href = 'login.html';
 
@@ -31,29 +31,27 @@ async function loadFromBackend() {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const mealsData = await mealsRes.json();
-    if (mealsData.meals && mealsData.meals.length > 0) {
+    if (mealsData.meals) {
       // Group meals by meal_name
       const grouped = {};
       mealsData.meals.forEach(m => {
-        const key = m.meal_name || 'General';
+        const key = (m.meal_name || 'snack').toLowerCase();
         if (!grouped[key]) grouped[key] = [];
         grouped[key].push({
           name:    m.food_name,
           cal:     m.calories,
-          qty:     1,
-          protein: m.protein || 0,
-          carbs:   m.carbs   || 0,
-          fat:     m.fat     || 0,
+          qty:     m.quantity || 1,
+          protein: m.protein  || 0,
+          carbs:   m.carbs    || 0,
+          fat:     m.fat      || 0,
           id:      m.id
         });
       });
-      // Map to STATE.meals
+      // Map to STATE.meals cleanly
       if (STATE.meals) {
         STATE.meals.forEach(meal => {
-          const foods = grouped[meal.name] || grouped['General'] || [];
-          if (foods.length > 0 && meal.foods.length === 0) {
-            meal.foods = foods;
-          }
+          const mKey = (meal.name || '').toLowerCase();
+          meal.foods = grouped[mKey] || [];
         });
       }
     }
@@ -77,6 +75,13 @@ async function loadFromBackend() {
     console.error('Backend load failed:', err);
   }
 }
+
+// Expose globally and listen for live AI updates
+window.loadFromBackend = loadFromBackend;
+window.loadBackendData = loadFromBackend;
+window.addEventListener('fitai:data-updated', () => {
+  loadFromBackend();
+});
 const STATE = {
   user:      JSON.parse(localStorage.getItem('fitai_user'))    || { name: 'User', goal: 'maintain' },
   targets:   JSON.parse(localStorage.getItem('fitai_targets')) || { calories: 2000, protein: 150, carbs: 225, fat: 56 },

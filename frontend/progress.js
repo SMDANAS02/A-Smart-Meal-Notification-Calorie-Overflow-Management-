@@ -2,7 +2,7 @@
 // PROGRESS PAGE — Daily Calories History Chart
 // ─────────────────────────────────────────
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = window.location.origin.includes('5500') ? 'http://localhost:3000/api' : '/api';
 const token = localStorage.getItem('fitai_token');
 
 // Redirect if not authenticated
