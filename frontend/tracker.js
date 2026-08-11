@@ -7,10 +7,50 @@ async function loadFromBackend() {
   return await loadBackendData();
 }
 
+function handleLiveMealAdded(mealData) {
+  if (!mealData || !mealData.food_name || !STATE.meals) return;
+  const mNameLower = (mealData.meal_name || '').toLowerCase().trim();
+  let meal = STATE.meals.find(sm => (sm.name || '').toLowerCase().trim() === mNameLower);
+  if (!meal) {
+    if (mNameLower.includes('snack') || mNameLower.includes('morning') || mNameLower.includes('afternoon')) {
+      meal = STATE.meals.find(sm => sm.name.includes('SNACK')) || STATE.meals[STATE.meals.length - 1];
+    } else if (mNameLower.includes('breakfast')) {
+      meal = STATE.meals[0];
+    } else if (mNameLower.includes('dinner')) {
+      meal = STATE.meals[STATE.meals.length - 1];
+    } else {
+      meal = STATE.meals[0];
+    }
+  }
+  if (meal) {
+    const existing = meal.foods.find(f => (f.id && mealData.id && f.id === mealData.id) || (f.name === mealData.food_name && f.cal === (mealData.calories || 0)));
+    if (!existing) {
+      meal.foods.push({
+        name:    mealData.food_name,
+        cal:     mealData.calories || 0,
+        qty:     mealData.quantity || 1,
+        protein: mealData.protein  || 0,
+        carbs:   mealData.carbs    || 0,
+        fat:     mealData.fat      || 0,
+        id:      mealData.id
+      });
+      localStorage.setItem('fitai_meals', JSON.stringify(STATE.meals));
+      renderMeals();
+      updateAllStats();
+    }
+  }
+}
+
+window.handleLiveMealAdded = handleLiveMealAdded;
+
 // Expose globally and listen for live AI updates
 window.loadFromBackend = loadFromBackend;
 window.loadBackendData = loadBackendData;
-window.addEventListener('fitai:data-updated', () => {
+window.addEventListener('fitai:data-updated', (e) => {
+  if (e && e.detail && (e.detail.meal || (e.detail.actionResult && e.detail.actionResult.meal))) {
+    const m = e.detail.meal || e.detail.actionResult.meal;
+    handleLiveMealAdded(m);
+  }
   loadBackendData();
 });
 const STATE = {

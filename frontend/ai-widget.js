@@ -240,7 +240,7 @@
 
       // If action logged a food, trigger active page UI updates!
       if (data.actionResult && data.actionResult.success) {
-        notifyPageDataChanged();
+        notifyPageDataChanged(data.actionResult);
       }
 
     } catch (err) {
@@ -314,9 +314,13 @@
     messagesFeed.scrollTop = messagesFeed.scrollHeight;
   }
 
-  function notifyPageDataChanged() {
-    // Dispatch custom event for tracker.js / diet.js
-    window.dispatchEvent(new CustomEvent('fitai:data-updated'));
+  function notifyPageDataChanged(actionResult = null) {
+    // Dispatch custom event for tracker.js / diet.js with detail
+    window.dispatchEvent(new CustomEvent('fitai:data-updated', { detail: actionResult }));
+
+    if (actionResult && actionResult.meal && typeof window.handleLiveMealAdded === 'function') {
+      window.handleLiveMealAdded(actionResult.meal);
+    }
 
     // Directly trigger window functions if available on tracker page
     if (typeof window.loadBackendData === 'function') {
