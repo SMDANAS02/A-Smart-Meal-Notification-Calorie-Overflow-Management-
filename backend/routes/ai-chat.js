@@ -150,9 +150,9 @@ SPECIAL INSTRUCTIONS FOR FOOD LOGGING:
       }
     }
 
-    // Fallback/Local AI response if API key wasn't provided or failed or didn't extract action
+    // Secondary extraction from conversational replyText or fallback message intent
     if (!extractedAction) {
-      extractedAction = detectFoodLogIntent(message);
+      extractedAction = extractActionFromReplyText(message, replyText) || detectFoodLogIntent(message);
     }
 
     if (!replyText || replyText.includes("API error:")) {
@@ -279,6 +279,80 @@ const COMMON_FOOD_DB = {
   'milk': { cal: 150, p: 8, c: 12, f: 8 },
   'salad': { cal: 120, p: 2, c: 8, f: 10 }
 };
+
+// Secondary extraction engine: extracts food nutrition calculated directly in Grok's response text
+function extractActionFromReplyText(message, replyText) {
+  if (!replyText || typeof replyText !== 'string') return null;
+  const combined = (message + ' ' + replyText).toLowerCase();
+  const keywords = ["add", "log", "ate", "had", "eat", "track", "consumed", "drink", "drank", "have", "record", "update your", "added", "make sure to update"];
+  const isLogReq = keywords.some(k => combined.includes(k));
+  if (!isLogReq) return null;
+
+  let meal = "snack";
+  if (combined.includes("breakfast")) meal = "breakfast";
+  else if (combined.includes("lunch")) meal = "lunch";
+  else if (combined.includes("dinner")) meal = "dinner";
+
+  // Try extracting calories from replyText first (e.g. "140 calories" / "around 140 calories"), then message
+  let calMatch = replyText.match(/(\d+)\s*(calories|kcal)/i) || message.match(/(\d+)\s*(calories|kcal|cal)/i);
+  let calories = calMatch ? parseInt(calMatch[1]) : 0;
+
+  // Try extracting macros from replyText
+  let pMatch = replyText.match(/(\d+)\s*g?\s*(of\s+)?protein/i);
+  let cMatch = replyText.match(/(\d+)\s*g?\s*(of\s+)?carbs/i);
+  let fMatch = replyText.match(/(\d+)\s*g?\s*(of\s+)?fat/i);
+
+  let protein = pMatch ? parseInt(pMatch[1]) : 0;
+  let carbs = cMatch ? parseInt(cMatch[1]) : 0;
+  let fat = fMatch ? parseInt(fMatch[1]) : 0;
+
+  // Quantity extraction
+  const qtyMatch = message.match(/(\d+)\s+([a-z]+)/i);
+  let qty = 1;
+  if (qtyMatch) {
+    const num = parseInt(qtyMatch[1]);
+    if (!isNaN(num) && num > 0 && num < 50) qty = num;
+  }
+
+  // Food name extraction
+  let matchedFood = null;
+  let foodName = "";
+  for (const [key, item] of Object.entries(COMMON_FOOD_DB)) {
+    if (combined.includes(key)) {
+      matchedFood = item;
+      foodName = key.charAt(0).toUpperCase() + key.slice(1);
+      break;
+    }
+  }
+
+  if (!matchedFood) {
+    foodName = message
+      .replace(/(add|log|i ate|i had|i consumed|to|for|breakfast|lunch|dinner|snack|\d+|cal|kcal|calories|track|record)/gi, '')
+      .trim();
+    if (!foodName || foodName.length < 2) foodName = "Custom Meal";
+    foodName = foodName.charAt(0).toUpperCase() + foodName.slice(1);
+  }
+
+  if (!calories) {
+    calories = matchedFood ? matchedFood.cal * qty : 150;
+  }
+
+  if (!pMatch && matchedFood) protein = Math.round(matchedFood.p * qty);
+  if (!cMatch && matchedFood) carbs = Math.round(matchedFood.c * qty);
+  if (!fMatch && matchedFood) fat = Math.round(matchedFood.f * qty);
+
+  return {
+    action: "LOG_FOOD",
+    meal_name: meal,
+    food_name: qty > 1 && !foodName.includes(String(qty)) ? `${qty} x ${foodName}` : foodName,
+    calories: calories,
+    protein: protein,
+    carbs: carbs,
+    fat: fat,
+    quantity: qty,
+    unit: "serving"
+  };
+}
 
 function detectFoodLogIntent(msg) {
   const text = msg.toLowerCase();
