@@ -42,9 +42,9 @@ async function callGrokAPI(apiKey, messages) {
 // ─────────────────────────────────────────
 router.post('/', auth, async (req, res) => {
   try {
-    const { message, history = [], clientApiKey } = req.body;
+    const { message, history = [], clientApiKey, date } = req.body;
     const userId = req.user.id;
-    const dateStr = new Date().toISOString().split('T')[0];
+    const dateStr = date || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
     // Determine API Key (Client key or Environment variable)
     const apiKey = clientApiKey || process.env.GROQ_API_KEY || process.env.GROK_API_KEY || process.env.XAI_API_KEY;
@@ -81,26 +81,34 @@ REAL-TIME USER METRICS TODAY (${dateStr}):
 - Logged Meals Today:
 ${mealsSummary}
 
-SPECIAL INSTRUCTIONS:
+SPECIAL INSTRUCTIONS FOR FOOD LOGGING:
 - Answer user queries about calories, foods, and nutrition warmly and concisely.
-- If user asks to log/add a food item (e.g. "add 2 eggs", "I ate an apple"), confirm it naturally.
-- IMPORTANT: Do NOT include raw JSON blocks, code fences, or technical data structures in your text response. Keep responses clean, natural, and user-friendly.`;
+- If the user asks to log, add, track, or record any food item (or mentions eating/drinking something), confirm it warmly AND append a JSON action block at the VERY END of your response inside <ACTION> ... </ACTION> tags like this:
+<ACTION>
+{
+  "action": "LOG_FOOD",
+  "meal_name": "breakfast" | "lunch" | "snack" | "dinner",
+  "food_name": "Food Item Name",
+  "calories": 250,
+  "protein": 15,
+  "carbs": 30,
+  "fat": 8,
+  "quantity": 1,
+  "unit": "serving"
+}
+</ACTION>`;
 
     let replyText = "";
     let actionResult = null;
 
-    // Helper to thoroughly clean any JSON/code blocks from text
-    const cleanTextOfCodeBlocks = (str) => {
+    // Helper to clean JSON code blocks / ACTION tags from user-facing text
+    const cleanTextForUser = (str) => {
       if (!str) return '';
       return String(str)
+        .replace(/<ACTION>[\s\S]*?<\/ACTION>/gi, '')
+        .replace(/```json[\s\S]*?```/gi, '')
         .replace(/```[\s\S]*?```/gi, '')
-        .replace(/\{[\s\S]*?"action"[\s\S]*?\}/gi, '')
-        .replace(/\{[\s\S]*?"calories"[\s\S]*?\}/gi, '')
-        .replace(/Here (is|are) the action details[\s\S]*/gi, '')
-        .replace(/Here (is|are) the action to log[\s\S]*/gi, '')
-        .replace(/Here is the JSON[\s\S]*/gi, '')
-        .replace(/Here are the action[\s\S]*/gi, '')
-        .replace(/```/g, '')
+        .replace(/\{[\s\S]*?"action"\s*:\s*"LOG_FOOD"[\s\S]*?\}/gi, '')
         .trim();
     };
 
@@ -111,7 +119,7 @@ SPECIAL INSTRUCTIONS:
         .filter(h => h && validRoles.has(h.role) && typeof h.content === 'string')
         .map(h => ({
           role: h.role,
-          content: cleanTextOfCodeBlocks(h.content)
+          content: cleanTextForUser(h.content)
         }))
         .filter(h => h.content.length > 0)
         .slice(-6);
@@ -130,32 +138,36 @@ SPECIAL INSTRUCTIONS:
       }
     }
 
-    // Fallback/Local AI response if API key wasn't provided or failed
+    // Extract food logging action from <ACTION> tags in AI reply
+    let extractedAction = null;
+    if (replyText) {
+      const actionTagMatch = replyText.match(/<ACTION>([\s\S]*?)<\/ACTION>/i);
+      if (actionTagMatch) {
+        try {
+          const parsed = JSON.parse(actionTagMatch[1].trim());
+          if (parsed && parsed.action === 'LOG_FOOD') extractedAction = parsed;
+        } catch (e) {}
+      }
+    }
+
+    // Fallback/Local AI response if API key wasn't provided or failed or didn't extract action
+    if (!extractedAction) {
+      extractedAction = detectFoodLogIntent(message);
+    }
+
     if (!replyText || replyText.includes("API error:")) {
       replyText = generateFallbackResponse(message, user, targetCal, totalCal, remainingCal, mealsSummary, waterGlasses);
     }
 
-    // Extract food logging intent from user message & replyText
-    let extractedAction = detectFoodLogIntent(message);
-
-    // Also check if replyText has any JSON intent
-    const jsonMatch = replyText.match(/(\{[\s\S]*?"action"\s*:\s*"LOG_FOOD"[\s\S]*?\})/);
-    if (jsonMatch) {
-      try {
-        const parsed = JSON.parse(jsonMatch[1]);
-        if (parsed && parsed.action === 'LOG_FOOD') extractedAction = parsed;
-      } catch (e) {}
-    }
-
-    // Clean user-facing text: strip raw JSON action blocks completely
-    replyText = cleanTextOfCodeBlocks(replyText);
+    // Clean user-facing text: strip raw JSON action blocks / ACTION tags
+    replyText = cleanTextForUser(replyText);
 
     // If an action was extracted, execute DB logging safely
     if (extractedAction && extractedAction.action === 'LOG_FOOD') {
       try {
         const mealName = String(extractedAction.meal_name || 'snack').toLowerCase().trim();
-        const foodName = String(extractedAction.food_name || 'Food').trim();
-        const cals = Math.max(0, parseInt(extractedAction.calories) || 100);
+        const foodName = String(extractedAction.food_name || 'Food Item').trim();
+        const cals = Math.max(1, parseInt(extractedAction.calories) || 150);
         const p = Math.max(0, parseInt(extractedAction.protein) || 0);
         const c = Math.max(0, parseInt(extractedAction.carbs) || 0);
         const f = Math.max(0, parseInt(extractedAction.fat) || 0);
@@ -178,8 +190,8 @@ SPECIAL INSTRUCTIONS:
         console.error("Database error while logging AI food action:", dbErr);
       }
 
-      if (!replyText) {
-        replyText = `✅ Added **${extractedAction.food_name || 'food'}** to your daily tracker!`;
+      if (!replyText || replyText.includes("fitAi Grok Coach")) {
+        replyText = `✅ Added **${extractedAction.food_name || 'food'}** (${extractedAction.calories} kcal) to your daily tracker!`;
       }
     }
 
@@ -245,37 +257,93 @@ I can help you:
 💡 *Enter your Grok API key in the chat settings above to unlock full AI conversational powers!*`;
 }
 
-// Simple fallback regex intent detection for logging food
+// Fallback regex & database intent detection for logging food
+const COMMON_FOOD_DB = {
+  'egg': { cal: 78, p: 6, c: 1, f: 5 },
+  'eggs': { cal: 78, p: 6, c: 1, f: 5 },
+  'chicken breast': { cal: 165, p: 31, c: 0, f: 4 },
+  'chicken': { cal: 165, p: 31, c: 0, f: 4 },
+  'apple': { cal: 52, p: 0, c: 14, f: 0 },
+  'banana': { cal: 89, p: 1, c: 23, f: 0 },
+  'rice': { cal: 206, p: 4, c: 45, f: 0 },
+  'oats': { cal: 280, p: 8, c: 52, f: 5 },
+  'paneer': { cal: 265, p: 18, c: 1, f: 21 },
+  'dal': { cal: 230, p: 18, c: 40, f: 1 },
+  'roti': { cal: 71, p: 3, c: 15, f: 0 },
+  'chapati': { cal: 71, p: 3, c: 15, f: 0 },
+  'dosa': { cal: 120, p: 3, c: 20, f: 3 },
+  'idli': { cal: 58, p: 2, c: 12, f: 0 },
+  'biryani': { cal: 290, p: 12, c: 40, f: 9 },
+  'pizza': { cal: 266, p: 11, c: 33, f: 10 },
+  'burger': { cal: 354, p: 17, c: 40, f: 14 },
+  'milk': { cal: 150, p: 8, c: 12, f: 8 },
+  'salad': { cal: 120, p: 2, c: 8, f: 10 }
+};
+
 function detectFoodLogIntent(msg) {
   const text = msg.toLowerCase();
-  const isLogReq = text.includes("add") || text.includes("log") || text.includes("ate") || text.includes("had");
+  const keywords = ["add", "log", "ate", "had", "eat", "track", "consumed", "drink", "drank", "have", "record"];
+  const isLogReq = keywords.some(k => text.includes(k));
   if (!isLogReq) return null;
 
-  // Extract meal
+  // Extract meal category
   let meal = "snack";
   if (text.includes("breakfast")) meal = "breakfast";
   else if (text.includes("lunch")) meal = "lunch";
   else if (text.includes("dinner")) meal = "dinner";
 
-  // Extract numbers (calories / quantity)
+  // Extract explicit calories if mentioned (e.g. 200 cal / 200 kcal / 200 calories)
   const calMatch = text.match(/(\d+)\s*(cal|kcal|calories)/);
-  const calories = calMatch ? parseInt(calMatch[1]) : 150;
+  let calories = calMatch ? parseInt(calMatch[1]) : 0;
 
-  // Extract food name basic logic
-  let foodName = msg
-    .replace(/(add|log|i ate|i had|to|for|breakfast|lunch|dinner|snack|\d+|cal|kcal|calories)/gi, '')
-    .trim();
-  if (!foodName || foodName.length < 2) foodName = "Custom Food Item";
+  // Extract quantity (e.g. 2 eggs, 3 rotis)
+  const qtyMatch = text.match(/(\d+)\s+([a-z]+)/);
+  let qty = 1;
+  if (qtyMatch) {
+    const num = parseInt(qtyMatch[1]);
+    if (!isNaN(num) && num > 0 && num < 50) qty = num;
+  }
+
+  // Find matching food item in COMMON_FOOD_DB
+  let matchedFood = null;
+  let foodName = "";
+  for (const [key, item] of Object.entries(COMMON_FOOD_DB)) {
+    if (text.includes(key)) {
+      matchedFood = item;
+      foodName = key.charAt(0).toUpperCase() + key.slice(1);
+      break;
+    }
+  }
+
+  if (!matchedFood) {
+    foodName = msg
+      .replace(/(add|log|i ate|i had|i consumed|to|for|breakfast|lunch|dinner|snack|\d+|cal|kcal|calories|track|record)/gi, '')
+      .trim();
+    if (!foodName || foodName.length < 2) foodName = "Custom Meal";
+    foodName = foodName.charAt(0).toUpperCase() + foodName.slice(1);
+  }
+
+  if (!calories) {
+    if (matchedFood) {
+      calories = matchedFood.cal * qty;
+    } else {
+      calories = 150;
+    }
+  }
+
+  const p = matchedFood ? Math.round(matchedFood.p * qty) : Math.round(calories * 0.15 / 4);
+  const c = matchedFood ? Math.round(matchedFood.c * qty) : Math.round(calories * 0.5 / 4);
+  const f = matchedFood ? Math.round(matchedFood.f * qty) : Math.round(calories * 0.35 / 9);
 
   return {
     action: "LOG_FOOD",
     meal_name: meal,
-    food_name: foodName.charAt(0).toUpperCase() + foodName.slice(1),
+    food_name: qty > 1 && !foodName.includes(String(qty)) ? `${qty} x ${foodName}` : foodName,
     calories: calories,
-    protein: Math.round(calories * 0.15 / 4),
-    carbs: Math.round(calories * 0.5 / 4),
-    fat: Math.round(calories * 0.35 / 9),
-    quantity: 1,
+    protein: p,
+    carbs: c,
+    fat: f,
+    quantity: qty,
     unit: "serving"
   };
 }

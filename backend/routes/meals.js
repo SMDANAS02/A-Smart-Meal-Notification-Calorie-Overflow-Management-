@@ -21,7 +21,7 @@ async function sendWhatsApp(to, message) {
 // Returns all meals for a day + daily summary
 // ─────────────────────────────────────────
 router.get('/', auth, (req, res) => {
-  const date = req.query.date || new Date().toISOString().split('T')[0];
+  const date = req.query.date || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
   const meals = db.prepare(`
     SELECT * FROM meals WHERE user_id = ? AND date = ? ORDER BY created_at ASC
@@ -58,7 +58,7 @@ router.post('/', auth, (req, res) => {
   if (!meal_name || !food_name || calories === undefined)
     return res.status(400).json({ error: 'meal_name, food_name, and calories are required.' });
 
-  const mealDate = date || new Date().toISOString().split('T')[0];
+  const mealDate = date || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
   const result = db.prepare(`
     INSERT INTO meals (user_id, date, meal_name, food_name, calories, protein, carbs, fat, quantity, unit)

@@ -1,4 +1,5 @@
-const API_BASE = window.location.origin.includes('5500') ? 'http://localhost:3000/api' : '/api';
+const isLocalServer = window.location.origin.includes('5500') || window.location.origin.includes('5501') || window.location.origin.includes('127.0.0.1') || window.location.protocol === 'file:';
+const API_BASE = isLocalServer ? 'http://localhost:3000/api' : '/api';
 const token = localStorage.getItem('fitai_token');
 if (!token) window.location.href = 'login.html';
 
@@ -212,7 +213,7 @@ window.addEventListener('DOMContentLoaded', () => {
   setDate();
   checkOnLoadDebt();
   loadBackendData();
-  // Auto refresh every 5 minutes (reduced from 30 seconds to prevent duplication)
+  // Auto refresh every 5 minutes
   setInterval(loadBackendData, 300000);
 });
 
@@ -222,22 +223,24 @@ async function loadBackendData() {
 
     // 1. Profile load
     const pRes  = await fetch(`${API_BASE}/profile`, { headers: { 'Authorization': `Bearer ${token}` } });
-    const pData = await pRes.json();
-    if (pData.profile) {
-      STATE.targets = {
-        calories: pData.profile.cal_target     || 2000,
-        protein:  pData.profile.protein_target || 150,
-        carbs:    pData.profile.carbs_target   || 225,
-        fat:      pData.profile.fat_target     || 56
-      };
-      STATE.waterGoal = pData.profile.water_target || 8;
-      STATE.mealCount = pData.profile.meal_count   || 3;
-    }
-    if (pData.user) {
-      STATE.user = { name: pData.user.name, goal: pData.profile?.goal || 'maintain' };
+    if (pRes.ok) {
+      const pData = await pRes.json();
+      if (pData.profile) {
+        STATE.targets = {
+          calories: pData.profile.cal_target     || 2000,
+          protein:  pData.profile.protein_target || 150,
+          carbs:    pData.profile.carbs_target   || 225,
+          fat:      pData.profile.fat_target     || 56
+        };
+        STATE.waterGoal = pData.profile.water_target || 8;
+        STATE.mealCount = pData.profile.meal_count   || 3;
+      }
+      if (pData.user) {
+        STATE.user = { name: pData.user.name, goal: pData.profile?.goal || 'maintain' };
+      }
     }
 
-    // 2. Initialize meal structure WITHOUT clearing foods
+    // 2. Initialize meal structure WITHOUT clearing existing foods
     const templates = MEAL_TEMPLATES[STATE.mealCount];
     const totalCal  = STATE.targets.calories;
     if (!STATE.meals || STATE.meals.length !== STATE.mealCount) {
@@ -247,7 +250,7 @@ async function loadBackendData() {
         foods: [] 
       }));
     } else {
-      // Update targets only, DON'T clear foods yet
+      // Update targets only, keep existing foods intact
       STATE.meals.forEach((meal, i) => {
         meal.target = Math.round(totalCal * templates[i].ratio);
       });
@@ -255,39 +258,79 @@ async function loadBackendData() {
 
     // 3. Meals load from backend
     const mRes  = await fetch(`${API_BASE}/meals?date=${today}`, { headers: { 'Authorization': `Bearer ${token}` } });
-    const mData = await mRes.json();
-    
-    // Always clear existing foods first to prevent duplication
-    STATE.meals.forEach(m => m.foods = []);
-    
-    if (mData.meals && mData.meals.length > 0) {
-      // Add foods from backend with case-insensitive meal matching
-      mData.meals.forEach(m => {
-        const mNameLower = (m.meal_name || '').toLowerCase().trim();
-        const meal = STATE.meals.find(sm => (sm.name || '').toLowerCase().trim() === mNameLower) || STATE.meals[0];
-        if (meal) {
-          meal.foods.push({
-            name:    m.food_name,
-            cal:     m.calories  || 0,
-            qty:     m.quantity  || 1,
-            protein: m.protein   || 0,
-            carbs:   m.carbs     || 0,
-            fat:     m.fat       || 0,
-            id:      m.id
+    if (mRes.ok) {
+      const mData = await mRes.json();
+      
+      if (mData && Array.isArray(mData.meals)) {
+        if (mData.meals.length > 0) {
+          // Backend has meals for today! Clear and populate STATE.meals from backend DB
+          STATE.meals.forEach(m => m.foods = []);
+          mData.meals.forEach(m => {
+            const mNameLower = (m.meal_name || '').toLowerCase().trim();
+            let meal = STATE.meals.find(sm => (sm.name || '').toLowerCase().trim() === mNameLower);
+            if (!meal) {
+              if (mNameLower.includes('snack') || mNameLower.includes('morning') || mNameLower.includes('afternoon')) {
+                meal = STATE.meals.find(sm => sm.name.includes('SNACK')) || STATE.meals[STATE.meals.length - 1];
+              } else if (mNameLower.includes('breakfast')) {
+                meal = STATE.meals[0];
+              } else if (mNameLower.includes('dinner')) {
+                meal = STATE.meals[STATE.meals.length - 1];
+              } else {
+                meal = STATE.meals[0];
+              }
+            }
+            if (meal) {
+              meal.foods.push({
+                name:    m.food_name,
+                cal:     m.calories  || 0,
+                qty:     m.quantity  || 1,
+                protein: m.protein   || 0,
+                carbs:   m.carbs     || 0,
+                fat:     m.fat       || 0,
+                id:      m.id
+              });
+            }
           });
+        } else {
+          // Backend has 0 meals for today. Auto-sync any locally logged foods to backend DB
+          const hasLocalFoods = STATE.meals.some(m => m.foods && m.foods.length > 0);
+          if (hasLocalFoods) {
+            for (const m of STATE.meals) {
+              for (const f of m.foods) {
+                if (!f.id) {
+                  try {
+                    const syncRes = await fetch(`${API_BASE}/meals`, {
+                      method: 'POST',
+                      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        date: today, meal_name: m.name, food_name: f.name,
+                        calories: f.cal, protein: f.protein, carbs: f.carbs, fat: f.fat,
+                        quantity: f.qty || 1, unit: 'serving'
+                      })
+                    });
+                    const syncData = await syncRes.json();
+                    if (syncData.meal && syncData.meal.id) f.id = syncData.meal.id;
+                  } catch (e) {
+                    console.error('Failed auto-syncing local food:', e);
+                  }
+                }
+              }
+            }
+          }
         }
-      });
+      }
     }
 
     // 4. Water load
     const wRes  = await fetch(`${API_BASE}/water?date=${today}`, { headers: { 'Authorization': `Bearer ${token}` } });
-    const wData = await wRes.json();
-    if (wData.glasses !== undefined) STATE.water = wData.glasses;
+    if (wRes.ok) {
+      const wData = await wRes.json();
+      if (wData.glasses !== undefined) STATE.water = wData.glasses;
+    }
 
     // 5. Update all UI
     setupNav();
     setupWater();
-    buildMeals();
     renderMeals();
     updateAllStats();
 
@@ -298,8 +341,8 @@ async function loadBackendData() {
 
   } catch (err) {
     console.error('Backend load failed:', err);
-    // Fallback to localStorage
-    setupNav(); setupWater(); buildMeals(); updateAllStats();
+    // Fallback to localStorage without wiping existing foods
+    setupNav(); setupWater(); renderMeals(); updateAllStats();
   }
 }
 

@@ -201,8 +201,12 @@
     try {
       const token = localStorage.getItem('fitai_token');
       const grokKey = localStorage.getItem('fitai_grok_key') || '';
+      const todayDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
-      const response = await fetch('/api/ai-chat', {
+      const isLocalDev = window.location.origin.includes('5500') || window.location.origin.includes('5501') || window.location.protocol === 'file:';
+      const API_ENDPOINT = isLocalDev ? 'http://localhost:3000/api/ai-chat' : '/api/ai-chat';
+
+      const response = await fetch(API_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -211,7 +215,8 @@
         body: JSON.stringify({
           message,
           history: chatHistory,
-          clientApiKey: grokKey
+          clientApiKey: grokKey,
+          date: todayDate
         })
       });
 
