@@ -1,49 +1,80 @@
-# 🔥 FitAI Backend — Setup Guide
+#  FitAI Backend
 
-## Tech Stack
-- **Node.js + Express** — REST API
-- **SQLite (better-sqlite3)** — Local database
-- **JWT** — Authentication
-- **bcryptjs** — Password hashing
-- **Nodemailer** — Email notifications
+Backend REST API for the **FitAI Calorie & Fitness Tracking Application**, built with Node.js and Express. It provides authentication, user profiles, meal tracking, calorie-debt management, progress tracking, water intake, and email notifications.
+
+## 🛠️ Tech Stack
+
+* **Node.js + Express** — REST API
+* **SQLite + better-sqlite3** — Local database
+* **JWT** — Authentication
+* **bcryptjs** — Password hashing
+* **Nodemailer** — Email notifications
 
 ---
 
-## 📁 Folder Structure
-```
+## 📁 Project Structure
+
+```text
 fitai-backend/
-├── server.js          ← Entry point
-├── db.js              ← Database setup (all tables)
-├── .env.example       ← Copy to .env and fill in
+├── server.js
+├── db.js
+├── .env.example
 ├── package.json
 ├── middleware/
-│   └── auth.js        ← JWT verification
+│   └── auth.js
 └── routes/
-    ├── auth.js        ← Register / Login
-    ├── profile.js     ← User profile & targets
-    ├── meals.js       ← Food log + calorie debt
-    ├── progress.js    ← Weight & measurements
-    ├── diet.js        ← Diet plan storage
-    ├── water.js       ← Water intake
-    └── notify.js      ← Email notifications
+    ├── auth.js
+    ├── profile.js
+    ├── meals.js
+    ├── progress.js
+    ├── diet.js
+    ├── water.js
+    └── notify.js
 ```
+
+### Main Files
+
+| File                 | Purpose                          |
+| -------------------- | -------------------------------- |
+| `server.js`          | Application entry point          |
+| `db.js`              | SQLite database and table setup  |
+| `middleware/auth.js` | JWT authentication middleware    |
+| `routes/auth.js`     | Register and login               |
+| `routes/profile.js`  | User profile and fitness targets |
+| `routes/meals.js`    | Food logging and calorie debt    |
+| `routes/progress.js` | Weight and measurement tracking  |
+| `routes/diet.js`     | Diet plan management             |
+| `routes/water.js`    | Water intake tracking            |
+| `routes/notify.js`   | Email notifications              |
 
 ---
 
-## 🚀 Setup Steps
+## 🚀 Getting Started
 
-### 1. Install dependencies
+### 1. Clone the Repository
+
 ```bash
+git clone <your-repository-url>
 cd fitai-backend
+```
+
+### 2. Install Dependencies
+
+```bash
 npm install
 ```
 
-### 2. Create .env file
+### 3. Create Environment Variables
+
+Copy the example environment file:
+
 ```bash
 cp .env.example .env
 ```
-Then edit `.env`:
-```
+
+Then configure your `.env` file:
+
+```env
 PORT=3000
 JWT_SECRET=your_random_secret_here
 EMAIL_USER=your_gmail@gmail.com
@@ -51,75 +82,186 @@ EMAIL_PASS=your_gmail_app_password
 FRONTEND_URL=http://localhost:5500
 ```
 
-> **Gmail App Password**: Go to Google Account → Security → 2-Step Verification → App Passwords → Generate one for "Mail"
+### 📧 Gmail App Password
 
-### 3. Run the server
+For email notifications:
+
+1. Open your Google Account.
+2. Go to **Security**.
+3. Enable **2-Step Verification**.
+4. Open **App Passwords**.
+5. Generate an app password for Mail.
+6. Add the generated password to `EMAIL_PASS`.
+
+> Do not commit your `.env` file or expose your Gmail app password or JWT secret.
+
+---
+
+## ▶️ Run the Backend
+
+### Development
+
 ```bash
-# Development (auto-restart)
 npm run dev
+```
 
-# Production
+The development server automatically restarts when files are changed.
+
+### Production
+
+```bash
 npm start
 ```
 
-### 4. Test it
-Open browser: `http://localhost:3000/api/health`  
-Should show: `{ "status": "ok", "message": "🔥 FitAI Backend is running!" }`
+The API will be available at:
 
----
-
-## 📡 API Endpoints
-
-### Auth
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Create account |
-| POST | `/api/auth/login` | Login → get JWT token |
-
-**Register body:**
-```json
-{ "name": "John", "email": "john@email.com", "password": "pass123" }
+```text
+http://localhost:3000
 ```
 
-**Login body:**
-```json
-{ "email": "john@email.com", "password": "pass123" }
+### Health Check
+
+Open:
+
+```text
+http://localhost:3000/api/health
 ```
 
-**Response:** `{ token: "eyJ...", user: { id, name, email } }`
+Expected response:
 
-> All routes below require: `Authorization: Bearer <token>` header
-
----
-
-### Profile
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/profile` | Get user + targets |
-| PUT | `/api/profile` | Update targets |
-
-**PUT body (any/all fields):**
 ```json
 {
-  "age": 25, "gender": "male", "height_cm": 175, "weight_kg": 75,
-  "goal": "lose", "activity_level": "moderate",
-  "cal_target": 1800, "protein_target": 140,
-  "carbs_target": 180, "fat_target": 60,
-  "water_target": 8, "meal_count": 3
+  "status": "ok",
+  "message": "🔥 FitAI Backend is running!"
 }
 ```
 
 ---
 
-### Meals
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/meals?date=2024-01-15` | Get meals for a day |
-| POST | `/api/meals` | Add food item |
-| DELETE | `/api/meals/:id` | Remove food item |
-| POST | `/api/meals/close-day` | End of day → create debt |
+# 📡 API Documentation
 
-**POST body:**
+## 🔐 Authentication
+
+| Method | Endpoint             | Description                 |
+| ------ | -------------------- | --------------------------- |
+| `POST` | `/api/auth/register` | Create a new account        |
+| `POST` | `/api/auth/login`    | Login and receive JWT token |
+
+### Register
+
+**Endpoint**
+
+```text
+POST /api/auth/register
+```
+
+**Request Body**
+
+```json
+{
+  "name": "John",
+  "email": "john@email.com",
+  "password": "pass123"
+}
+```
+
+### Login
+
+**Endpoint**
+
+```text
+POST /api/auth/login
+```
+
+**Request Body**
+
+```json
+{
+  "email": "john@email.com",
+  "password": "pass123"
+}
+```
+
+**Response**
+
+```json
+{
+  "token": "eyJ...",
+  "user": {
+    "id": 1,
+    "name": "John",
+    "email": "john@email.com"
+  }
+}
+```
+
+### Authentication Header
+
+All protected endpoints require:
+
+```http
+Authorization: Bearer <token>
+```
+
+---
+
+# 👤 Profile
+
+| Method | Endpoint       | Description                        |
+| ------ | -------------- | ---------------------------------- |
+| `GET`  | `/api/profile` | Get user profile and targets       |
+| `PUT`  | `/api/profile` | Update profile and fitness targets |
+
+### Update Profile
+
+**Endpoint**
+
+```text
+PUT /api/profile
+```
+
+**Request Body**
+
+```json
+{
+  "age": 25,
+  "gender": "male",
+  "height_cm": 175,
+  "weight_kg": 75,
+  "goal": "lose",
+  "activity_level": "moderate",
+  "cal_target": 1800,
+  "protein_target": 140,
+  "carbs_target": 180,
+  "fat_target": 60,
+  "water_target": 8,
+  "meal_count": 3
+}
+```
+
+Any or all supported fields can be updated.
+
+---
+
+# 🍽️ Meals
+
+| Method   | Endpoint                     | Description                              |
+| -------- | ---------------------------- | ---------------------------------------- |
+| `GET`    | `/api/meals?date=2024-01-15` | Get meals for a specific day             |
+| `POST`   | `/api/meals`                 | Add a food item                          |
+| `DELETE` | `/api/meals/:id`             | Remove a food item                       |
+| `POST`   | `/api/meals/close-day`       | Close the day and calculate calorie debt |
+
+### Add Food
+
+**Endpoint**
+
+```text
+POST /api/meals
+```
+
+**Request Body**
+
 ```json
 {
   "date": "2024-01-15",
@@ -134,65 +276,222 @@ Should show: `{ "status": "ok", "message": "🔥 FitAI Backend is running!" }`
 }
 ```
 
-**GET response includes:**
+### Get Daily Meals
+
+```text
+GET /api/meals?date=2024-01-15
+```
+
+The response includes daily totals and the adjusted calorie target:
+
 ```json
 {
-  "totals": { "calories": 1650, "protein": 120, "carbs": 200, "fat": 55 },
-  "adjustedTarget": 1650  ← Calorie debt already deducted here!
+  "totals": {
+    "calories": 1650,
+    "protein": 120,
+    "carbs": 200,
+    "fat": 55
+  },
+  "adjustedTarget": 1650
 }
+```
+
+> `adjustedTarget` already includes any applicable calorie debt deduction.
+
+---
+
+# ⚖️ Calorie Debt System
+
+FitAI automatically handles days when the user consumes more calories than their target.
+
+### Rules
+
+| Calorie Over Target | Debt Distribution                 |
+| ------------------- | --------------------------------- |
+| `≤ 300 kcal`        | Deduct across the next **2 days** |
+| `> 300 kcal`        | Deduct across the next **3 days** |
+
+The minimum adjusted calorie target is always:
+
+```text
+1200 kcal
+```
+
+### Flow
+
+```text
+User exceeds calorie target
+          ↓
+User closes the day
+          ↓
+POST /api/meals/close-day
+          ↓
+Calorie debt is calculated
+          ↓
+Next day's target is automatically reduced
+          ↓
+GET /api/meals?date=tomorrow
+          ↓
+Frontend receives adjustedTarget
+```
+
+The frontend should always use `adjustedTarget` when displaying the user's daily calorie target.
+
+---
+
+# 📈 Progress
+
+| Method | Endpoint                 | Description             |
+| ------ | ------------------------ | ----------------------- |
+| `GET`  | `/api/progress?limit=30` | Get progress history    |
+| `POST` | `/api/progress`          | Log today's progress    |
+| `GET`  | `/api/progress/stats`    | Get progress statistics |
+
+Progress data can be used to track changes in:
+
+* Weight
+* Body measurements
+* Fitness progress
+* Historical trends
+
+---
+
+# 💧 Water
+
+| Method | Endpoint                     | Description              |
+| ------ | ---------------------------- | ------------------------ |
+| `GET`  | `/api/water?date=2024-01-15` | Get today's water intake |
+| `POST` | `/api/water`                 | Update water intake      |
+
+The water system tracks the number of glasses consumed by the user.
+
+---
+
+# 📧 Notifications
+
+| Method | Endpoint                    | Description              |
+| ------ | --------------------------- | ------------------------ |
+| `POST` | `/api/notify/meal-reminder` | Send meal reminder email |
+| `POST` | `/api/notify/daily-summary` | Send daily summary email |
+
+Email notifications are powered by **Nodemailer**.
+
+---
+
+# 🔗 Connecting the Frontend
+
+Set the backend API URL in your frontend:
+
+```javascript
+const API = 'http://localhost:3000/api';
+let token = localStorage.getItem('fitai_token');
+```
+
+### Example: Get Today's Meals
+
+```javascript
+const res = await fetch(`${API}/meals?date=2024-01-15`, {
+  headers: {
+    Authorization: `Bearer ${token}`
+  }
+});
+
+const data = await res.json();
+console.log(data);
 ```
 
 ---
 
-### Progress
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/progress?limit=30` | Get progress history |
-| POST | `/api/progress` | Log today |
-| GET | `/api/progress/stats` | Summary stats |
+# 🔒 Security
+
+The backend uses:
+
+* **JWT** for user authentication
+* **bcryptjs** for password hashing
+* Environment variables for sensitive configuration
+
+Never commit sensitive values such as:
+
+```text
+.env
+JWT_SECRET
+EMAIL_PASS
+```
+
+Add `.env` to your `.gitignore`:
+
+```gitignore
+.env
+node_modules/
+*.db
+```
 
 ---
 
-### Water
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/water?date=2024-01-15` | Get glasses today |
-| POST | `/api/water` | Update glasses count |
+# 🧪 API Testing
+
+You can test the API using tools such as:
+
+* Postman
+* Insomnia
+* Thunder Client
+* Frontend `fetch()`
+
+Recommended testing order:
+
+```text
+1. Register
+   ↓
+2. Login
+   ↓
+3. Copy JWT token
+   ↓
+4. Add Authorization header
+   ↓
+5. Test Profile
+   ↓
+6. Test Meals
+   ↓
+7. Test Progress
+   ↓
+8. Test Water
+   ↓
+9. Test Notifications
+```
 
 ---
 
-### Notifications
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/notify/meal-reminder` | Send meal reminder email |
-| POST | `/api/notify/daily-summary` | Send end-of-day summary |
+# 📌 Environment Variables
+
+| Variable       | Description                          |
+| -------------- | ------------------------------------ |
+| `PORT`         | Backend server port                  |
+| `JWT_SECRET`   | Secret key used to sign JWT tokens   |
+| `EMAIL_USER`   | Gmail address used for notifications |
+| `EMAIL_PASS`   | Gmail App Password                   |
+| `FRONTEND_URL` | Frontend application URL             |
 
 ---
 
-## 🔄 Calorie Debt System
+# 👨‍💻 Development
 
-When user exceeds daily calorie target:
-- **Over ≤300 kcal** → Deduct across **2 days**
-- **Over >300 kcal** → Deduct across **3 days**
-- Minimum target is always **1200 kcal**
-- `/api/meals?date=` response includes `adjustedTarget` — use this on the frontend!
+Start the backend in development mode:
 
-**Flow:**
-1. User closes day → POST `/api/meals/close-day`
-2. Next day → GET `/api/meals?date=tomorrow` → `adjustedTarget` is auto-reduced
+```bash
+npm run dev
+```
 
----
+Make sure the frontend and backend are running on their respective ports.
 
-## 🔗 Connecting Frontend
+### Default Local Setup
 
-Add this to your frontend JS files:
-```javascript
-const API = 'http://localhost:3000/api';
-let token = localStorage.getItem('fitai_token');
+```text
+Frontend
+http://localhost:5500
 
-// Example: Get today's meals
-const res = await fetch(`${API}/meals?date=2024-01-15`, {
-  headers: { 'Authorization': `Bearer ${token}` }
-});
-const data = await res.json();
+Backend
+http://localhost:3000
+
+API
+http://localhost:3000/api
 ```
