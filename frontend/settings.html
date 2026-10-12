@@ -16,8 +16,8 @@
       --border: #1c1c1c;
       --border2: #222;
       --text: #f0f0f0;
-      --muted: #555;
-      --muted2: #333;
+      --muted: #9ca3af;
+      --muted2: #a1a1aa;
       --input-bg: #0a0a0a;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,11 +41,11 @@
       text-decoration: none; padding: 6px 14px; border-radius: 2px;
       transition: color 0.2s, background 0.2s;
     }
-    .nav-link:hover { color: #aaa; }
+    .nav-link:hover { color: #e4e4e7; }
     .nav-link.active { color: white; background: rgba(255,255,255,0.05); }
     .nav-center { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; color: var(--muted); letter-spacing: 2px; }
     .nav-right { display: flex; align-items: center; gap: 12px; }
-    .nav-user { font-size: 13px; color: var(--muted); font-weight: 500; }
+    .nav-user { font-size: 13px; color: #d4d4d8; font-weight: 500; }
     .nav-avatar {
       width: 32px; height: 32px; border-radius: 50%;
       background: var(--red); color: white;
@@ -104,7 +104,7 @@
       cursor: pointer; border-bottom: 2px solid transparent;
       transition: color 0.2s, border-color 0.2s; margin-bottom: -1px;
     }
-    .tab-btn:hover { color: #888; }
+    .tab-btn:hover { color: #f4f4f5; }
     .tab-btn.active { color: white; border-bottom-color: var(--red); }
 
     /* ── TAB CONTENT ── */
@@ -188,9 +188,9 @@
     .field-group.single { grid-template-columns: 1fr; }
     .field-group.triple { grid-template-columns: 1fr 1fr 1fr; }
     .field { margin-bottom: 0; }
-    .field-label { display: block; font-size: 9px; font-weight: 700; color: var(--muted2); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px; transition: color 0.2s; }
+    .field-label { display: block; font-size: 10px; font-weight: 700; color: var(--muted2); letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 8px; transition: color 0.2s; }
     .field:focus-within .field-label { color: var(--red); }
-    .input-wrap { position: relative; display: flex; align-items: center; background: var(--input-bg); border: 1px solid #181818; border-radius: 2px; transition: border-color 0.2s, box-shadow 0.2s; overflow: hidden; }
+    .input-wrap { position: relative; display: flex; align-items: center; background: var(--input-bg); border: 1px solid #27272a; border-radius: 2px; transition: border-color 0.2s, box-shadow 0.2s; overflow: hidden; }
     .input-wrap::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--red); transform: scaleY(0); transition: transform 0.2s ease; transform-origin: bottom; }
     .field:focus-within .input-wrap { border-color: rgba(232,0,13,0.3); box-shadow: 0 0 0 2px rgba(232,0,13,0.06); }
     .field:focus-within .input-wrap::before { transform: scaleY(1); }
@@ -199,7 +199,7 @@
       color: var(--text); font-family: 'Barlow', sans-serif; font-size: 14px;
       padding: 0 14px;
     }
-    .field-input::placeholder { color: #2a2a2a; }
+    .field-input::placeholder { color: #71717a; }
     .field-input:disabled { color: var(--muted); cursor: not-allowed; }
     .field-select {
       flex: 1; height: 44px; background: transparent; border: none; outline: none;
@@ -400,7 +400,7 @@
         <div class="field">
           <label class="field-label">WhatsApp Number</label>
           <div class="input-wrap">
-            <span class="input-unit" style="padding:0 12px;color:#555;font-size:13px;">+91</span>
+            <span class="input-unit" style="padding:0 12px;color:#a1a1aa;font-size:13px;">+91</span>
             <input class="field-input" type="tel" id="fieldWhatsapp" placeholder="9876543210" maxlength="10"/>
           </div>
         </div>
@@ -821,7 +821,11 @@ function setSaveLoading(loading) {
 
 // ── Logout
 function logout() {
+  const remEmail = localStorage.getItem('fitai_remember_email');
+  const remPass  = localStorage.getItem('fitai_remember_password');
   localStorage.clear();
+  if (remEmail) localStorage.setItem('fitai_remember_email', remEmail);
+  if (remPass)  localStorage.setItem('fitai_remember_password', remPass);
   window.location.href = 'login.html';
 }
 

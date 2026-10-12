@@ -678,7 +678,7 @@ function updateRecommendations(remaining) {
   container.innerHTML = suitable.map(m => `
     <div class="rec-meal-item" onclick="quickAddRec('${m.name}',${m.cal},${m.protein},${m.carbs},${m.fat})">
       <div class="rec-meal-name">${m.name}</div>
-      <div class="rec-meal-cal">${m.cal} <span style="font-size:12px;color:#444">KCAL</span></div>
+      <div class="rec-meal-cal">${m.cal} <span style="font-size:12px;color:#a1a1aa">KCAL</span></div>
       <div class="rec-meal-macros">P: ${m.protein}g · C: ${m.carbs}g · F: ${m.fat}g</div>
       <span class="rec-meal-tag">${m.tag}</span>
     </div>`).join('');
@@ -761,18 +761,18 @@ function showCalorieDebtBanner(overCal, perDay, days) {
   const dayCards = Array.from({length: days}, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() + i + 1);
     const label = d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
-    return `<div style="background:rgba(232,0,13,0.06);border:1px solid rgba(232,0,13,0.15);border-radius:2px;padding:8px;text-align:center;"><div style="font-size:9px;color:#333;letter-spacing:1px;margin-bottom:4px;">${label}</div><div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:#E8000D;">${STATE.targets.calories - perDay} KCAL</div></div>`;
+    return `<div style="background:rgba(232,0,13,0.06);border:1px solid rgba(232,0,13,0.2);border-radius:2px;padding:8px;text-align:center;"><div style="font-size:10px;color:#a1a1aa;letter-spacing:1px;margin-bottom:4px;">${label}</div><div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:#E8000D;">${STATE.targets.calories - perDay} KCAL</div></div>`;
   }).join('');
   banner.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#E8000D;letter-spacing:3px;">⚠️ CALORIE OVERFLOW DETECTED</div>
-      <button onclick="document.getElementById('debt-banner').remove()" style="background:none;border:none;color:#333;font-size:16px;cursor:pointer;">✕</button>
+      <button onclick="document.getElementById('debt-banner').remove()" style="background:none;border:none;color:#a1a1aa;font-size:16px;cursor:pointer;">✕</button>
     </div>
-    <div style="font-size:13px;color:#666;line-height:1.7;margin-bottom:12px;">You exceeded today's target by <span style="color:#E8000D;font-weight:700;">${overCal} kcal</span>. Balancing over next <span style="color:#E8000D;font-weight:700;">${days} days</span>.</div>
-    <div style="background:#111;border:1px solid #1a1a1a;border-radius:2px;padding:12px;margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:10px;color:#333;letter-spacing:2px;font-weight:700;">TODAY OVER</span><span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#ef4444;">+${overCal} KCAL</span></div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:10px;color:#333;letter-spacing:2px;font-weight:700;">DEDUCTION / DAY</span><span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#eab308;">−${perDay} KCAL</span></div>
-      <div style="display:flex;justify-content:space-between;"><span style="font-size:10px;color:#333;letter-spacing:2px;font-weight:700;">BALANCE DAYS</span><span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#E8000D;">NEXT ${days} DAYS</span></div>
+    <div style="font-size:13px;color:#d4d4d8;line-height:1.7;margin-bottom:12px;">You exceeded today's target by <span style="color:#E8000D;font-weight:700;">${overCal} kcal</span>. Balancing over next <span style="color:#E8000D;font-weight:700;">${days} days</span>.</div>
+    <div style="background:#141414;border:1px solid #262626;border-radius:2px;padding:12px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:10px;color:#a1a1aa;letter-spacing:2px;font-weight:700;">TODAY OVER</span><span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#ef4444;">+${overCal} KCAL</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:10px;color:#a1a1aa;letter-spacing:2px;font-weight:700;">DEDUCTION / DAY</span><span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#eab308;">−${perDay} KCAL</span></div>
+      <div style="display:flex;justify-content:space-between;"><span style="font-size:10px;color:#a1a1aa;letter-spacing:2px;font-weight:700;">BALANCE DAYS</span><span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#E8000D;">NEXT ${days} DAYS</span></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(${days},1fr);gap:6px;">${dayCards}</div>`;
   document.body.appendChild(banner);
@@ -799,7 +799,7 @@ function showInAppBanner(message, type='info', mealName=null, duration=5000) {
   banner.id = 'fitai-banner';
   banner.style.cssText = `position:fixed;top:68px;right:20px;z-index:9999;background:#0d0d0d;border:1px solid ${c.border};border-left:3px solid ${c.text};border-radius:4px;padding:14px 18px;max-width:360px;display:flex;align-items:flex-start;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,0.6);animation:bannerSlide 0.35s cubic-bezier(0.4,0,0.2,1) forwards;font-family:'Barlow',sans-serif;`;
   const logBtn = mealName ? `<button onclick="quickLogFromBanner('${mealName}')" style="margin-top:8px;height:28px;padding:0 12px;background:${c.text};border:none;border-radius:2px;color:white;font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:2px;cursor:pointer;">LOG NOW</button>` : '';
-  banner.innerHTML = `<div style="flex:1"><div style="font-size:12px;color:${c.text};font-weight:700;letter-spacing:1px;margin-bottom:4px;">FITAI ALERT</div><div style="font-size:13px;color:#888;line-height:1.5;">${message}</div>${logBtn}</div><button onclick="this.parentElement.remove()" style="background:none;border:none;color:#333;font-size:16px;cursor:pointer;flex-shrink:0;margin-top:-2px;">✕</button>`;
+  banner.innerHTML = `<div style="flex:1"><div style="font-size:12px;color:${c.text};font-weight:700;letter-spacing:1px;margin-bottom:4px;">FITAI ALERT</div><div style="font-size:13px;color:#d4d4d8;line-height:1.5;">${message}</div>${logBtn}</div><button onclick="this.parentElement.remove()" style="background:none;border:none;color:#a1a1aa;font-size:16px;cursor:pointer;flex-shrink:0;margin-top:-2px;">✕</button>`;
   document.body.appendChild(banner);
   bannerTimeout = setTimeout(() => { if (banner.parentElement) { banner.style.animation='bannerFade 0.3s ease forwards'; setTimeout(()=>banner.remove(),300); } }, duration);
 }
@@ -924,19 +924,19 @@ function resetScan() {
 
 function renderHistory() {
   const list = document.getElementById('txHistoryList');
-  if (txScanHistory.length===0) { list.innerHTML=`<div class="tx-history-empty">NO SCAN HISTORY YET<br><span style="font-size:10px;color:#1a1a1a">Scan a food label to see it here</span></div>`; return; }
+  if (txScanHistory.length===0) { list.innerHTML=`<div class="tx-history-empty">NO SCAN HISTORY YET<br><span style="font-size:11px;color:#a1a1aa">Scan a food label to see it here</span></div>`; return; }
   list.innerHTML = txScanHistory.map(item => `
     <div class="tx-history-item">
-      ${item.image ? `<img class="tx-history-img" src="${item.image}" alt="food"/>` : `<div class="tx-history-img" style="background:#111;display:flex;align-items:center;justify-content:center;color:#222">📷</div>`}
+      ${item.image ? `<img class="tx-history-img" src="${item.image}" alt="food"/>` : `<div class="tx-history-img" style="background:#141414;display:flex;align-items:center;justify-content:center;color:#71717a">📷</div>`}
       <div class="tx-history-info">
         <div class="tx-history-name">${item.name}</div>
-        <div class="tx-history-cal">${item.cal} <span style="font-size:10px;color:#444">KCAL</span></div>
+        <div class="tx-history-cal">${item.cal} <span style="font-size:11px;color:#a1a1aa">KCAL</span></div>
         <div class="tx-history-macros">P: ${item.protein}g · C: ${item.carbs}g · F: ${item.fat}g</div>
       </div>
       <div style="text-align:right">
         <div class="tx-history-time">${item.date}</div>
         <div class="tx-history-time">${item.time}</div>
-        <div style="font-size:9px;color:#222;margin-top:4px;letter-spacing:1px">${item.meal}</div>
+        <div style="font-size:10px;color:#a1a1aa;margin-top:4px;letter-spacing:1px">${item.meal}</div>
       </div>
     </div>`).join('');
 }
@@ -962,7 +962,7 @@ function showFoodSuggestions(query) {
   if (results.length===0) { box.innerHTML=`<div class="sug-empty">NO MATCH — try: chicken, rice, idli, egg...</div>`; box.classList.add('show'); return; }
   box.innerHTML = results.map(([key,val],i) => {
     const highlighted = key.replace(new RegExp(`(${q})`,'gi'),'<span>$1</span>');
-    return `<div class="suggestion-item" id="sug-${i}" onclick="selectSuggestion('${key}')" onmouseenter="highlightSuggestion(${i})"><div class="sug-left"><div class="sug-name">${highlighted}</div><div class="sug-note">${val.note}</div></div><div class="sug-cal">${val.cal}<span style="font-size:9px;color:#444"> KCAL</span></div></div>`;
+    return `<div class="suggestion-item" id="sug-${i}" onclick="selectSuggestion('${key}')" onmouseenter="highlightSuggestion(${i})"><div class="sug-left"><div class="sug-name">${highlighted}</div><div class="sug-note">${val.note}</div></div><div class="sug-cal">${val.cal}<span style="font-size:11px;color:#a1a1aa"> KCAL</span></div></div>`;
   }).join('');
   box.classList.add('show');
 }

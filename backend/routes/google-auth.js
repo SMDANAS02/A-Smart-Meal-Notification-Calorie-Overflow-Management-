@@ -27,23 +27,23 @@ router.post('/google', async (req, res) => {
     const { name, email, picture, sub: googleId } = payload;
 
     // Check if user exists
-    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    let user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email);
 
     if (!user) {
       // Create new user
       const hashed = bcrypt.hashSync(googleId + process.env.JWT_SECRET, 10);
-      const result = db.prepare(
+      const result = await db.prepare(
         'INSERT INTO users (name, email, password, google_id, avatar) VALUES (?, ?, ?, ?, ?)'
       ).run(name, email, hashed, googleId, picture);
 
       // Create empty profile
-      db.prepare('INSERT INTO profiles (user_id) VALUES (?)').run(result.lastInsertRowid);
+      await db.prepare('INSERT INTO profiles (user_id) VALUES (?)').run(result.lastInsertRowid);
 
-      user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+      user = await db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
     } else {
       // Update google_id if not set
       if (!user.google_id) {
-        db.prepare('UPDATE users SET google_id = ?, avatar = ? WHERE id = ?')
+        await db.prepare('UPDATE users SET google_id = ?, avatar = ? WHERE id = ?')
           .run(googleId, picture, user.id);
       }
     }

@@ -23,12 +23,12 @@ function getTransporter() {
 router.post('/meal-reminder', auth, async (req, res) => {
   const { meal_name, meal_time } = req.body;
 
-  const user    = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
-  const profile = db.prepare('SELECT * FROM profiles WHERE user_id = ?').get(req.user.id);
+  const user    = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  const profile = await db.prepare('SELECT * FROM profiles WHERE user_id = ?').get(req.user.id);
   const date    = new Date().toISOString().split('T')[0];
 
   // Get today's meal totals
-  const mealItems = db.prepare(`
+  const mealItems = await db.prepare(`
     SELECT * FROM meals WHERE user_id = ? AND date = ? AND meal_name = ?
   `).all(req.user.id, date, meal_name);
 
@@ -79,11 +79,11 @@ router.post('/meal-reminder', auth, async (req, res) => {
 // Send end-of-day summary email
 // ─────────────────────────────────────────
 router.post('/daily-summary', auth, async (req, res) => {
-  const user    = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
-  const profile = db.prepare('SELECT * FROM profiles WHERE user_id = ?').get(req.user.id);
+  const user    = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  const profile = await db.prepare('SELECT * FROM profiles WHERE user_id = ?').get(req.user.id);
   const date    = req.body.date || new Date().toISOString().split('T')[0];
 
-  const meals = db.prepare(`
+  const meals = await db.prepare(`
     SELECT * FROM meals WHERE user_id = ? AND date = ?
   `).all(req.user.id, date);
 

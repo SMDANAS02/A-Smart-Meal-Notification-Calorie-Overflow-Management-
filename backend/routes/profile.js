@@ -44,55 +44,65 @@ Start your fitness journey now! 💪`;
 }
 
 // GET /api/profile
-router.get('/', auth, (req, res) => {
-  const profile = db.prepare('SELECT * FROM profiles WHERE user_id = ?').get(req.user.id);
-  const user    = db.prepare('SELECT id, name, email, phone, created_at FROM users WHERE id = ?').get(req.user.id);
-  res.json({ user, profile });
+router.get('/', auth, async (req, res) => {
+  try {
+    const profile = await db.prepare('SELECT * FROM profiles WHERE user_id = ?').get(req.user.id);
+    const user    = await db.prepare('SELECT id, name, email, phone, created_at FROM users WHERE id = ?').get(req.user.id);
+    res.json({ user, profile });
+  } catch (err) {
+    console.error('Profile fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch profile' });
+  }
 });
 
 // PUT /api/profile — Save onboarding data / update targets
-router.put('/', auth, (req, res) => {
+router.put('/', auth, async (req, res) => {
   const {
     age, gender, height_cm, weight_kg, goal, activity_level,
     cal_target, protein_target, carbs_target, fat_target,
     water_target, meal_count, phone
   } = req.body;
 
-  db.prepare(`
-    UPDATE profiles SET
-      age            = COALESCE(?, age),
-      gender         = COALESCE(?, gender),
-      height_cm      = COALESCE(?, height_cm),
-      weight_kg      = COALESCE(?, weight_kg),
-      goal           = COALESCE(?, goal),
-      activity_level = COALESCE(?, activity_level),
-      cal_target     = COALESCE(?, cal_target),
-      protein_target = COALESCE(?, protein_target),
-      carbs_target   = COALESCE(?, carbs_target),
-      fat_target     = COALESCE(?, fat_target),
-      water_target   = COALESCE(?, water_target),
-      meal_count     = COALESCE(?, meal_count),
-      updated_at     = datetime('now')
-    WHERE user_id = ?
-  `).run(
-    age, gender, height_cm, weight_kg, goal, activity_level,
-    cal_target, protein_target, carbs_target, fat_target,
-    water_target, meal_count,
-    req.user.id
-  );
+  try {
+    await db.prepare(`
+      UPDATE profiles SET
+        age            = COALESCE(?, age),
+        gender         = COALESCE(?, gender),
+        height_cm      = COALESCE(?, height_cm),
+        weight_kg      = COALESCE(?, weight_kg),
+        goal           = COALESCE(?, goal),
+        activity_level = COALESCE(?, activity_level),
+        cal_target     = COALESCE(?, cal_target),
+        protein_target = COALESCE(?, protein_target),
+        carbs_target   = COALESCE(?, carbs_target),
+        fat_target     = COALESCE(?, fat_target),
+        water_target   = COALESCE(?, water_target),
+        meal_count     = COALESCE(?, meal_count),
+        updated_at     = datetime('now')
+      WHERE user_id = ?
+    `).run(
+      age, gender, height_cm, weight_kg, goal, activity_level,
+      cal_target, protein_target, carbs_target, fat_target,
+      water_target, meal_count,
+      req.user.id
+    );
 
-  // ── Phone update + Welcome message
-  if (phone) {
-    const existingUser = db.prepare('SELECT phone, name FROM users WHERE id = ?').get(req.user.id);
-    const isNewPhone   = !existingUser.phone || existingUser.phone !== phone;
-    db.prepare('UPDATE users SET phone = ? WHERE id = ?').run(phone, req.user.id);
-    if (isNewPhone) {
-      sendWelcomeMessage(phone, existingUser.name);
+    // ── Phone update + Welcome message
+    if (phone) {
+      const existingUser = await db.prepare('SELECT phone, name FROM users WHERE id = ?').get(req.user.id);
+      const isNewPhone   = !existingUser?.phone || existingUser.phone !== phone;
+      await db.prepare('UPDATE users SET phone = ? WHERE id = ?').run(phone, req.user.id);
+      if (isNewPhone && existingUser?.name) {
+        sendWelcomeMessage(phone, existingUser.name);
+      }
     }
-  }
 
-  const updated = db.prepare('SELECT * FROM profiles WHERE user_id = ?').get(req.user.id);
-  res.json({ message: 'Profile updated!', profile: updated });
+    const updated = await db.prepare('SELECT * FROM profiles WHERE user_id = ?').get(req.user.id);
+    res.json({ message: 'Profile updated!', profile: updated });
+  } catch (err) {
+    console.error('Profile update error:', err);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
 });
 
 module.exports = router;

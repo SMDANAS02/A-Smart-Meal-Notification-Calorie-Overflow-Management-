@@ -23,7 +23,7 @@ const { OAuth2Client } = require('google-auth-library');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // POST /api/auth/register
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const { name, email, password } = req.body;
 
   if (!name || !email || !password)
@@ -32,61 +32,72 @@ router.post('/register', (req, res) => {
   if (password.length < 6)
     return res.status(400).json({ error: 'Password must be at least 6 characters.' });
 
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
-  if (existing)
-    return res.status(409).json({ error: 'Email already registered. Please login.' });
+  try {
+    const existing = await db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    if (existing)
+      return res.status(409).json({ error: 'Email already registered. Please login.' });
 
-  const hashed = bcrypt.hashSync(password, 10);
+    const hashed = bcrypt.hashSync(password, 10);
 
-  const result = db.prepare(
-    'INSERT INTO users (name, email, password) VALUES (?, ?, ?)'
-  ).run(name, email, hashed);
+    const result = await db.prepare(
+      'INSERT INTO users (name, email, password) VALUES (?, ?, ?)'
+    ).run(name, email, hashed);
 
-  db.prepare('INSERT INTO profiles (user_id) VALUES (?)').run(result.lastInsertRowid);
+    await db.prepare('INSERT INTO profiles (user_id) VALUES (?)').run(result.lastInsertRowid);
 
-  const token = jwt.sign(
-    { id: result.lastInsertRowid, email, name },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-  );
-  // Send welcome WhatsApp if phone exists
-if (req.body.phone) {
-  sendWelcomeMessage(req.body.phone, name);
-}
+    const token = jwt.sign(
+      { id: result.lastInsertRowid, email, name },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
 
-  res.status(201).json({
-    message: 'Registration successful!',
-    token,
-    user: { id: result.lastInsertRowid, name, email }
-  });
+    // Send welcome WhatsApp if phone exists
+    if (req.body.phone) {
+      sendWelcomeMessage(req.body.phone, name);
+    }
+
+    res.status(201).json({
+      message: 'Registration successful!',
+      token,
+      user: { id: result.lastInsertRowid, name, email }
+    });
+  } catch (err) {
+    console.error('Registration error:', err);
+    res.status(500).json({ error: 'Server error during registration' });
+  }
 });
 
 // POST /api/auth/login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password)
     return res.status(400).json({ error: 'Email and password are required.' });
 
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-  if (!user)
-    return res.status(401).json({ error: 'Invalid email or password.' });
+  try {
+    const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    if (!user)
+      return res.status(401).json({ error: 'Invalid email or password.' });
 
-  const match = bcrypt.compareSync(password, user.password);
-  if (!match)
-    return res.status(401).json({ error: 'Invalid email or password.' });
+    const match = bcrypt.compareSync(password, user.password);
+    if (!match)
+      return res.status(401).json({ error: 'Invalid email or password.' });
 
-  const token = jwt.sign(
-    { id: user.id, email: user.email, name: user.name },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-  );
+    const token = jwt.sign(
+      { id: user.id, email: user.email, name: user.name },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
 
-  res.json({
-    message: 'Login successful!',
-    token,
-    user: { id: user.id, name: user.name, email: user.email }
-  });
+    res.json({
+      message: 'Login successful!',
+      token,
+      user: { id: user.id, name: user.name, email: user.email }
+    });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Server error during login' });
+  }
 });
 
 // POST /api/auth/google
@@ -108,15 +119,15 @@ router.post('/google', async (req, res) => {
     const { sub: googleId, email, name, picture } = payload;
 
     // Check if user exists
-    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    let user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email);
 
     if (!user) {
       // Create new user
-      const result = db.prepare(
+      const result = await db.prepare(
         'INSERT INTO users (name, email, password) VALUES (?, ?, ?)'
       ).run(name, email, 'google_oauth'); // Dummy password for Google users
 
-      db.prepare('INSERT INTO profiles (user_id) VALUES (?)').run(result.lastInsertRowid);
+      await db.prepare('INSERT INTO profiles (user_id) VALUES (?)').run(result.lastInsertRowid);
 
       user = {
         id: result.lastInsertRowid,

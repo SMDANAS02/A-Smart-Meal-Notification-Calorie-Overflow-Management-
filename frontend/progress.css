@@ -8,10 +8,10 @@
   --card: #0e0e0e;
   --border: #1c1c1c;
   --text: #ffffff;
-  --text-muted: #999999;
+  --text-muted: #a1a1aa;
   --green: #22c55e;
   --yellow: #eab308;
-  --grey: #333333;
+  --grey: #52525b;
   --orange: #e87700;
 }
 
@@ -147,7 +147,7 @@
 }
 
 .history-chart .target-line {
-  stroke: rgba(255, 255, 255, 0.3);
+  stroke: rgba(255, 255, 255, 0.45);
   stroke-width: 2;
   stroke-dasharray: 5, 5;
 }
@@ -155,30 +155,30 @@
 .history-chart .target-label {
   font-family: 'Barlow', sans-serif;
   font-size: 12px;
-  fill: var(--text-muted);
+  fill: #d4d4d8;
   letter-spacing: 1px;
 }
 
 .history-chart .bar-label {
   font-family: 'Barlow', sans-serif;
   font-size: 12px;
-  fill: var(--text);
+  fill: #ffffff;
   font-weight: 600;
   text-anchor: middle;
 }
 
 .history-chart .axis-label {
   font-family: 'Barlow', sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  fill: var(--text);
+  fill: #f4f4f5;
   text-anchor: start;
 }
 
 .history-chart .y-axis-label {
   font-family: 'Barlow', sans-serif;
   font-size: 11px;
-  fill: var(--text-muted);
+  fill: #a1a1aa;
   text-anchor: end;
 }
 

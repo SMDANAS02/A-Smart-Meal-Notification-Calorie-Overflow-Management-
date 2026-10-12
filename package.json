@@ -22,6 +22,8 @@
   "homepage": "https://github.com/SMDANAS02/A-Smart-Meal-Notification-Calorie-Overflow-Management-#readme",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
+    "@neon/config": "^1.8.6",
+    "@neon/env": "^1.5.3",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
     "cors": "^2.8.6",

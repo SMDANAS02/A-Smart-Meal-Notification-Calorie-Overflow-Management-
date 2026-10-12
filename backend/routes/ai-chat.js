@@ -7,34 +7,79 @@ const auth    = require('../middleware/auth');
 // Function to call AI API (Supports Groq gsk_... and xAI xai-...)
 async function callGrokAPI(apiKey, messages) {
   let endpoint = "https://api.groq.com/openai/v1/chat/completions";
-  let model = "llama-3.3-70b-versatile";
+  let models = ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "groq/compound-mini", "openai/gpt-oss-20b"];
 
   if (apiKey.startsWith("xai-")) {
     endpoint = "https://api.x.ai/v1/chat/completions";
-    model = "grok-2-latest";
+    models = ["grok-2-latest", "grok-beta"];
   }
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: messages,
-      temperature: 0.7,
-      max_tokens: 800
-    })
-  });
+  let lastError = null;
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`AI API Error (${response.status}): ${errorText}`);
+  for (const model of models) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 800
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        lastError = new Error(`AI API Error (${response.status}, model ${model}): ${errorText}`);
+        console.warn(`Model ${model} failed, trying next fallback:`, errorText);
+        continue;
+      }
+
+      const data = await response.json();
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        return data.choices[0].message.content;
+      }
+    } catch (err) {
+      lastError = err;
+    }
   }
 
-  const data = await response.json();
-  return data.choices[0].message.content;
+  throw lastError || new Error("Failed to get response from AI model");
+}
+
+// Helper to detect greetings and casual conversational messages
+function isGreetingOrCasualMessage(msg) {
+  if (!msg || typeof msg !== 'string') return true;
+  const clean = msg.trim().toLowerCase().replace(/[^\w\s]/g, '');
+  const greetings = new Set([
+    'hi', 'hello', 'hey', 'heyy', 'heyyy', 'hola', 'yo', 'sup', 'howdy',
+    'good morning', 'good afternoon', 'good evening', 'good night',
+    'how are you', 'how r u', 'how are u', 'whats up', 'what can you do',
+    'who are you', 'help', 'help me', 'thanks', 'thank you', 'thx', 'bye',
+    'goodbye', 'ok', 'okay', 'cool', 'nice', 'great', 'yes', 'no', 'start', 'test'
+  ]);
+  if (greetings.has(clean)) return true;
+  if (/^(hi|hello|hey|yo|howdy)\b/i.test(clean) && clean.split(/\s+/).length <= 4 && !/(\d|egg|food|eat|ate|cal|bread|rice|meal|apple|banana|chicken|salad|roti|dosa|idli|paneer)/i.test(clean)) {
+    return true;
+  }
+  return false;
+}
+
+// Helper to validate that a food item name is legitimate
+function isValidFoodItemName(foodName) {
+  if (!foodName || typeof foodName !== 'string') return false;
+  const name = foodName.toLowerCase().trim();
+  const invalid = new Set([
+    'hi', 'hello', 'hey', 'heyy', 'yo', 'food', 'meal', 'custom meal', 'snack', 'breakfast', 'lunch', 'dinner',
+    'nothing', 'something', 'yes', 'no', 'thanks', 'thank you', 'water', 'item', 'food item', 'my food'
+  ]);
+  if (invalid.has(name) || name.length < 2) return false;
+  if (!/[a-zA-Z]/.test(name)) return false;
+  return true;
 }
 
 // ─────────────────────────────────────────
@@ -43,7 +88,7 @@ async function callGrokAPI(apiKey, messages) {
 router.post('/', auth, async (req, res) => {
   try {
     const { message, history = [], clientApiKey, date } = req.body;
-    const userId = req.user.id;
+    const userId = req.user?.id || req.user?.userId;
     const dateStr = date || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
     // Determine API Key (Client key or Environment variable)
@@ -67,6 +112,8 @@ router.post('/', auth, async (req, res) => {
       ? todayMeals.map(m => `- ${m.meal_name.toUpperCase()}: ${m.food_name} (${m.calories} kcal, P:${m.protein}g C:${m.carbs}g F:${m.fat}g)`).join('\n')
       : 'No meals logged today yet.';
 
+    const isGreeting = isGreetingOrCasualMessage(message);
+
     // Construct System Context for Grok / Groq
     const systemPrompt = `You are fitAi Calorie & Nutrition Assistant, an intelligent, energetic fitness & nutrition AI assistant inside the fitAi Calorie Overflow & Diet Management app.
 
@@ -81,9 +128,13 @@ REAL-TIME USER METRICS TODAY (${dateStr}):
 - Logged Meals Today:
 ${mealsSummary}
 
-SPECIAL INSTRUCTIONS FOR FOOD LOGGING:
-- Answer user queries about calories, foods, and nutrition warmly and concisely.
-- If the user asks to log, add, track, or record any food item (or mentions eating/drinking something), confirm it warmly AND append a JSON action block at the VERY END of your response inside <ACTION> ... </ACTION> tags like this:
+STRICT BEHAVIOR RULES:
+1. GREETINGS & CASUAL CONVERSATION:
+- When the user sends a greeting (like "hi", "hello", "hey", "how are you", "good morning"), respond warmly and conversationally.
+- NEVER append an <ACTION> block for greetings, general conversation, advice, or questions.
+
+2. FOOD LOGGING ACTIONS:
+- ONLY when the user explicitly asks to log, add, track, or record a SPECIFIC food/meal item (or says they ate/drank a food item), confirm it warmly AND append a JSON action block at the VERY END inside <ACTION> ... </ACTION> tags like this:
 <ACTION>
 {
   "action": "LOG_FOOD",
@@ -96,7 +147,8 @@ SPECIAL INSTRUCTIONS FOR FOOD LOGGING:
   "quantity": 1,
   "unit": "serving"
 }
-</ACTION>`;
+</ACTION>
+- NEVER log non-food words like "hi", "hello", "food", or "custom meal".`;
 
     let replyText = "";
     let actionResult = null;
@@ -138,21 +190,26 @@ SPECIAL INSTRUCTIONS FOR FOOD LOGGING:
       }
     }
 
-    // Extract food logging action from <ACTION> tags in AI reply
+    // Extract food logging action ONLY if this is NOT a greeting or casual chat
     let extractedAction = null;
-    if (replyText) {
+    if (!isGreeting && replyText) {
       const actionTagMatch = replyText.match(/<ACTION>([\s\S]*?)<\/ACTION>/i);
       if (actionTagMatch) {
         try {
           const parsed = JSON.parse(actionTagMatch[1].trim());
-          if (parsed && parsed.action === 'LOG_FOOD') extractedAction = parsed;
+          if (parsed && parsed.action === 'LOG_FOOD' && isValidFoodItemName(parsed.food_name)) {
+            extractedAction = parsed;
+          }
         } catch (e) {}
       }
     }
 
-    // Secondary extraction from conversational replyText or fallback message intent
-    if (!extractedAction) {
+    // Secondary extraction ONLY if NOT a greeting and intent is explicit
+    if (!isGreeting && !extractedAction) {
       extractedAction = extractActionFromReplyText(message, replyText) || detectFoodLogIntent(message);
+      if (extractedAction && !isValidFoodItemName(extractedAction.food_name)) {
+        extractedAction = null;
+      }
     }
 
     if (!replyText || replyText.includes("API error:")) {
@@ -282,16 +339,22 @@ const COMMON_FOOD_DB = {
 
 // Secondary extraction engine: extracts food nutrition calculated directly in Grok's response text
 function extractActionFromReplyText(message, replyText) {
+  if (!message || typeof message !== 'string') return null;
   if (!replyText || typeof replyText !== 'string') return null;
-  const combined = (message + ' ' + replyText).toLowerCase();
-  const keywords = ["add", "log", "ate", "had", "eat", "track", "consumed", "drink", "drank", "have", "record", "update your", "added", "make sure to update"];
-  const isLogReq = keywords.some(k => combined.includes(k));
-  if (!isLogReq) return null;
+
+  const userText = message.toLowerCase();
+  
+  // The user MUST indicate intent to log or eat something in their message
+  const userLoggingKeywords = ["add", "log", "ate", "had", "eat", "track", "consumed", "drank", "record"];
+  const hasUserIntent = userLoggingKeywords.some(k => new RegExp(`\\b${k}\\b`, 'i').test(userText));
+  const hasQuantityAndFood = /\b\d+\s*(?:boiled\s+)?(?:egg|eggs|apple|banana|roti|chapati|dosa|idli|slice|bowl|cup|g|gram|cal|kcal)/i.test(userText);
+
+  if (!hasUserIntent && !hasQuantityAndFood) return null;
 
   let meal = "snack";
-  if (combined.includes("breakfast")) meal = "breakfast";
-  else if (combined.includes("lunch")) meal = "lunch";
-  else if (combined.includes("dinner")) meal = "dinner";
+  if (userText.includes("breakfast")) meal = "breakfast";
+  else if (userText.includes("lunch")) meal = "lunch";
+  else if (userText.includes("dinner")) meal = "dinner";
 
   // Try extracting calories from replyText first (e.g. "140 calories" / "around 140 calories"), then message
   let calMatch = replyText.match(/(\d+)\s*(calories|kcal)/i) || message.match(/(\d+)\s*(calories|kcal|cal)/i);
@@ -318,7 +381,7 @@ function extractActionFromReplyText(message, replyText) {
   let matchedFood = null;
   let foodName = "";
   for (const [key, item] of Object.entries(COMMON_FOOD_DB)) {
-    if (combined.includes(key)) {
+    if (userText.includes(key)) {
       matchedFood = item;
       foodName = key.charAt(0).toUpperCase() + key.slice(1);
       break;
@@ -327,11 +390,14 @@ function extractActionFromReplyText(message, replyText) {
 
   if (!matchedFood) {
     foodName = message
-      .replace(/(add|log|i ate|i had|i consumed|to|for|breakfast|lunch|dinner|snack|\d+|cal|kcal|calories|track|record)/gi, '')
+      .replace(/(add|log|i ate|i had|i consumed|i drank|to|for|breakfast|lunch|dinner|snack|\d+|cal|kcal|calories|track|record|please)/gi, '')
+      .replace(/[^\w\s]/g, '')
       .trim();
-    if (!foodName || foodName.length < 2) foodName = "Custom Meal";
+    if (!foodName || foodName.length < 2) return null; // Never log empty or single characters
     foodName = foodName.charAt(0).toUpperCase() + foodName.slice(1);
   }
+
+  if (!isValidFoodItemName(foodName)) return null;
 
   if (!calories) {
     calories = matchedFood ? matchedFood.cal * qty : 150;
@@ -355,10 +421,14 @@ function extractActionFromReplyText(message, replyText) {
 }
 
 function detectFoodLogIntent(msg) {
+  if (!msg || typeof msg !== 'string') return null;
   const text = msg.toLowerCase();
-  const keywords = ["add", "log", "ate", "had", "eat", "track", "consumed", "drink", "drank", "have", "record"];
-  const isLogReq = keywords.some(k => text.includes(k));
-  if (!isLogReq) return null;
+  
+  const userLoggingKeywords = ["add", "log", "ate", "had", "eat", "track", "consumed", "drank", "record"];
+  const hasUserIntent = userLoggingKeywords.some(k => new RegExp(`\\b${k}\\b`, 'i').test(text));
+  const hasQuantityAndFood = /\b\d+\s*(?:boiled\s+)?(?:egg|eggs|apple|banana|roti|chapati|dosa|idli|slice|bowl|cup|g|gram|cal|kcal)/i.test(text);
+
+  if (!hasUserIntent && !hasQuantityAndFood) return null;
 
   // Extract meal category
   let meal = "snack";
@@ -391,11 +461,14 @@ function detectFoodLogIntent(msg) {
 
   if (!matchedFood) {
     foodName = msg
-      .replace(/(add|log|i ate|i had|i consumed|to|for|breakfast|lunch|dinner|snack|\d+|cal|kcal|calories|track|record)/gi, '')
+      .replace(/(add|log|i ate|i had|i consumed|i drank|to|for|breakfast|lunch|dinner|snack|\d+|cal|kcal|calories|track|record|please)/gi, '')
+      .replace(/[^\w\s]/g, '')
       .trim();
-    if (!foodName || foodName.length < 2) foodName = "Custom Meal";
+    if (!foodName || foodName.length < 2) return null;
     foodName = foodName.charAt(0).toUpperCase() + foodName.slice(1);
   }
+
+  if (!isValidFoodItemName(foodName)) return null;
 
   if (!calories) {
     if (matchedFood) {

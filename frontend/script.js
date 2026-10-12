@@ -1,19 +1,44 @@
 // script.js — FitAI Login Page
 const API_BASE = window.location.origin.includes('5500') ? 'http://localhost:3000/api' : '/api';
 
-window.addEventListener('DOMContentLoaded', () => {
-  if (localStorage.getItem('fitai_token')) {
-    window.location.href = 'tracker.html';
-    return;
+window.addEventListener('DOMContentLoaded', async () => {
+  const token = localStorage.getItem('fitai_token');
+  if (token) {
+    try {
+      const res = await fetch(`${API_BASE}/profile`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        window.location.href = 'tracker.html';
+        return;
+      } else {
+        localStorage.removeItem('fitai_token');
+      }
+    } catch (e) {
+      // If network fails or offline, still allow login form
+      console.warn('Token check failed:', e);
+    }
   }
+
   initParticles();
 
   const savedEmail = localStorage.getItem('fitai_remember_email');
+  const savedPassword = localStorage.getItem('fitai_remember_password');
+  const box = document.getElementById('checkBox');
+
   if (savedEmail) {
     document.getElementById('email').value = savedEmail;
-    const box = document.getElementById('checkBox');
-    box.classList.add('checked');
-    box.dataset.checked = 'true';
+    if (savedPassword) {
+      try {
+        document.getElementById('password').value = atob(savedPassword);
+      } catch (err) {
+        document.getElementById('password').value = savedPassword;
+      }
+    }
+    if (box) {
+      box.classList.add('checked');
+      box.dataset.checked = 'true';
+    }
   }
 
   document.addEventListener('keydown', (e) => {
@@ -98,9 +123,18 @@ async function handleLogin() {
       data = await apiPost('/auth/login', { email, password });
     }
 
-    const isChecked = document.getElementById('checkBox').dataset.checked === 'true';
-    if (isChecked) localStorage.setItem('fitai_remember_email', email);
-    else localStorage.removeItem('fitai_remember_email');
+    const isChecked = document.getElementById('checkBox')?.dataset.checked === 'true';
+    if (isChecked) {
+      localStorage.setItem('fitai_remember_email', email);
+      try {
+        localStorage.setItem('fitai_remember_password', btoa(password));
+      } catch (err) {
+        localStorage.setItem('fitai_remember_password', password);
+      }
+    } else {
+      localStorage.removeItem('fitai_remember_email');
+      localStorage.removeItem('fitai_remember_password');
+    }
 
     localStorage.setItem('fitai_token', data.token);
     localStorage.setItem('fitai_user', JSON.stringify(data.user));
@@ -207,8 +241,25 @@ function togglePw() {
 function toggleCheck() {
   const box     = document.getElementById('checkBox');
   const checked = box.dataset.checked === 'true';
-  box.dataset.checked = String(!checked);
-  box.classList.toggle('checked', !checked);
+  const newChecked = !checked;
+  box.dataset.checked = String(newChecked);
+  box.classList.toggle('checked', newChecked);
+
+  if (!newChecked) {
+    localStorage.removeItem('fitai_remember_email');
+    localStorage.removeItem('fitai_remember_password');
+  } else {
+    const email = document.getElementById('email')?.value.trim();
+    const password = document.getElementById('password')?.value.trim();
+    if (email) localStorage.setItem('fitai_remember_email', email);
+    if (password) {
+      try {
+        localStorage.setItem('fitai_remember_password', btoa(password));
+      } catch (e) {
+        localStorage.setItem('fitai_remember_password', password);
+      }
+    }
+  }
 }
 
 function goBack() { window.location.reload(); }

@@ -1,4 +1,4 @@
-﻿// routes/whatsapp.js — FitAI WhatsApp Bot (Smart Food Search)
+// routes/whatsapp.js — FitAI WhatsApp Bot (Smart Food Search)
 const express = require('express');
 const router  = express.Router();
 const twilio  = require('twilio');
@@ -128,7 +128,7 @@ router.post('/webhook', async (req, res) => {
   if (!from || !body) return res.sendStatus(200);
 
   const lower = body.toLowerCase().trim();
-  const user  = db.prepare('SELECT * FROM users WHERE phone = ?').get(from);
+  const user  = await db.prepare('SELECT * FROM users WHERE phone = ?').get(from);
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
   if (!user) {
@@ -136,7 +136,7 @@ router.post('/webhook', async (req, res) => {
     return res.sendStatus(200);
   }
 
-  const profile = db.prepare('SELECT * FROM profiles WHERE user_id = ?').get(user.id);
+  const profile = await db.prepare('SELECT * FROM profiles WHERE user_id = ?').get(user.id);
 
   try {
     if (pendingSessions[from]) {
@@ -148,9 +148,9 @@ router.post('/webhook', async (req, res) => {
         const nutrition    = calculateNutrition(`${qty} ${selectedFood}`, qty);
         delete pendingSessions[from];
         if (nutrition) {
-          db.prepare(`INSERT INTO meals (user_id, date, meal_name, food_name, calories, protein, carbs, fat, quantity, unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-            .run(user.id, today, 'getCurrentMealName()', nutrition.food_name, nutrition.calories, nutrition.protein, nutrition.carbs, nutrition.fat, nutrition.quantity, 'serving');
-          const todayTotal = db.prepare('SELECT SUM(calories) as total FROM meals WHERE user_id = ? AND date = ?').get(user.id, today);
+          await db.prepare(`INSERT INTO meals (user_id, date, meal_name, food_name, calories, protein, carbs, fat, quantity, unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+            .run(user.id, today, getCurrentMealName(), nutrition.food_name, nutrition.calories, nutrition.protein, nutrition.carbs, nutrition.fat, nutrition.quantity, 'serving');
+          const todayTotal = await db.prepare('SELECT SUM(calories) as total FROM meals WHERE user_id = ? AND date = ?').get(user.id, today);
           const target = profile?.cal_target || 2000;
           const total  = todayTotal?.total || 0;
           await sendWhatsApp(from,
@@ -172,8 +172,8 @@ router.post('/webhook', async (req, res) => {
       );
     }
     else if (lower === 'status' || lower === 's') {
-      const meals  = db.prepare('SELECT SUM(calories) as total FROM meals WHERE user_id = ? AND date = ?').get(user.id, today);
-      const water  = db.prepare('SELECT glasses FROM water_log WHERE user_id = ? AND date = ?').get(user.id, today);
+      const meals  = await db.prepare('SELECT SUM(calories) as total FROM meals WHERE user_id = ? AND date = ?').get(user.id, today);
+      const water  = await db.prepare('SELECT glasses FROM water_log WHERE user_id = ? AND date = ?').get(user.id, today);
       const cal    = meals?.total || 0;
       const target = profile?.cal_target || 2000;
       await sendWhatsApp(from,
@@ -184,9 +184,9 @@ router.post('/webhook', async (req, res) => {
       const foodText  = body.slice(4).trim();
       const nutrition = calculateNutrition(foodText);
       if (nutrition) {
-        db.prepare(`INSERT INTO meals (user_id, date, meal_name, food_name, calories, protein, carbs, fat, quantity, unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        await db.prepare(`INSERT INTO meals (user_id, date, meal_name, food_name, calories, protein, carbs, fat, quantity, unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
           .run(user.id, today, getCurrentMealName(), nutrition.food_name, nutrition.calories, nutrition.protein, nutrition.carbs, nutrition.fat, nutrition.quantity, 'serving');
-        const todayTotal = db.prepare('SELECT SUM(calories) as total FROM meals WHERE user_id = ? AND date = ?').get(user.id, today);
+        const todayTotal = await db.prepare('SELECT SUM(calories) as total FROM meals WHERE user_id = ? AND date = ?').get(user.id, today);
         const target = profile?.cal_target || 2000;
         const total  = todayTotal?.total || 0;
         await sendWhatsApp(from,
@@ -209,7 +209,7 @@ router.post('/webhook', async (req, res) => {
       }
     }
     else if (lower === 'calories' || lower === 'cal') {
-      const meals  = db.prepare('SELECT food_name, calories FROM meals WHERE user_id = ? AND date = ? ORDER BY id DESC LIMIT 6').all(user.id, today);
+      const meals  = await db.prepare('SELECT food_name, calories FROM meals WHERE user_id = ? AND date = ? ORDER BY id DESC LIMIT 6').all(user.id, today);
       const total  = meals.reduce((s, m) => s + (m.calories || 0), 0);
       const target = profile?.cal_target || 2000;
       let msg = `🔥 *Today's Meals*\n\n`;
@@ -221,9 +221,9 @@ router.post('/webhook', async (req, res) => {
       const glasses = parseInt(lower.split(' ')[1]);
       if (isNaN(glasses)) { await sendWhatsApp(from, '💧 Usage: *water 6*'); }
       else {
-        const ex = db.prepare('SELECT * FROM water_log WHERE user_id = ? AND date = ?').get(user.id, today);
-        if (ex) db.prepare('UPDATE water_log SET glasses = ? WHERE user_id = ? AND date = ?').run(glasses, user.id, today);
-        else db.prepare('INSERT INTO water_log (user_id, date, glasses) VALUES (?, ?, ?)').run(user.id, today, glasses);
+        const ex = await db.prepare('SELECT * FROM water_log WHERE user_id = ? AND date = ?').get(user.id, today);
+        if (ex) await db.prepare('UPDATE water_log SET glasses = ? WHERE user_id = ? AND date = ?').run(glasses, user.id, today);
+        else await db.prepare('INSERT INTO water_log (user_id, date, glasses) VALUES (?, ?, ?)').run(user.id, today, glasses);
         const target = profile?.water_target || 8;
         await sendWhatsApp(from, `💧 *Water Updated!*\n\n${glasses}/${target} glasses ✅\n${glasses >= target ? '🎯 Goal reached!' : `${target - glasses} more to go!`}`);
       }
@@ -232,8 +232,8 @@ router.post('/webhook', async (req, res) => {
       const weight = parseFloat(lower.split(' ')[1]);
       if (isNaN(weight)) { await sendWhatsApp(from, '⚖️ Usage: *weight 74.5*'); }
       else {
-        db.prepare('INSERT INTO progress (user_id, date, weight_kg) VALUES (?, ?, ?)').run(user.id, today, weight);
-        db.prepare('UPDATE profiles SET weight_kg = ? WHERE user_id = ?').run(weight, user.id);
+        await db.prepare('INSERT INTO progress (user_id, date, weight_kg) VALUES (?, ?, ?)').run(user.id, today, weight);
+        await db.prepare('UPDATE profiles SET weight_kg = ? WHERE user_id = ?').run(weight, user.id);
         await sendWhatsApp(from, `⚖️ *Weight Logged!*\n\n${weight} kg recorded ✅\nKeep tracking! 💪`);
       }
     }
@@ -278,7 +278,7 @@ router.post('/webhook', async (req, res) => {
 router.post('/send-reminder', async (req, res) => {
   const { meal_name } = req.body;
   try {
-    const users = db.prepare(`
+    const users = await db.prepare(`
       SELECT u.id, u.name, u.phone, p.cal_target, p.water_target
       FROM users u
       JOIN profiles p ON p.user_id = u.id
@@ -289,7 +289,7 @@ router.post('/send-reminder', async (req, res) => {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
     for (const u of users) {
-      const meals  = db.prepare('SELECT SUM(calories) as total FROM meals WHERE user_id = ? AND date = ?').get(u.id, today);
+      const meals  = await db.prepare('SELECT SUM(calories) as total FROM meals WHERE user_id = ? AND date = ?').get(u.id, today);
       const cal    = meals?.total || 0;
       const target = u.cal_target || 2000;
 
